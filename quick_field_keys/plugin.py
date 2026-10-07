@@ -15,7 +15,7 @@ from qgis.PyQt.QtWidgets import (
 
 
 SETTING = 'quick_field_keys/presets'
-MENU = '선택 객체 빠른 필드 입력'
+MENU = 'Quick Field Keys'
 KEYS = tuple(str(n) for n in range(1, 10))
 
 
@@ -23,10 +23,10 @@ def converted_value(field, text, use_null):
     if use_null:
         return None
     result = field.convertCompatible(text)
-    # QGIS 3은 (성공 여부, 값), QGIS 4는 변환된 값을 반환합니다.
+    # Accept both the historical tuple and the QGIS 4 converted-value result.
     if isinstance(result, tuple):
         if not result[0]:
-            raise ValueError('필드 자료형에 맞지 않는 값입니다.')
+            raise ValueError('The value is incompatible with the field type.')
         return result[1]
     return result
 
@@ -55,12 +55,12 @@ class QuickFieldKeys:
 
     def initGui(self):
         for key in KEYS:
-            action = QAction(f'빠른 필드 입력 Alt+{key}', self.iface.mainWindow())
+            action = QAction(f'Quick Field Keys: Alt+{key}', self.iface.mainWindow())
             action.triggered.connect(lambda checked=False, k=key: self.apply(k))
             self.iface.registerMainWindowAction(action, f'Alt+{key}')
             self.iface.addPluginToMenu(MENU, action)
             self.actions.append(action)
-        action = QAction('필드·값 설정…', self.iface.mainWindow())
+        action = QAction('Configure fields and values...', self.iface.mainWindow())
         action.setIcon(QIcon(str(Path(__file__).with_name('icon.svg'))))
         action.triggered.connect(self.configure)
         self.iface.addPluginToMenu(MENU, action)
@@ -81,7 +81,7 @@ class QuickFieldKeys:
     def active_vector(self):
         layer = self.iface.activeLayer()
         if not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            self.warn('유효한 벡터 레이어를 선택하세요.')
+            self.warn('Select a valid vector layer.')
             return None
         return layer
 
@@ -93,10 +93,10 @@ class QuickFieldKeys:
         dialog.setWindowTitle(MENU)
         dialog.resize(700, 450)
         layout = QVBoxLayout(dialog)
-        note = QLabel('현재 활성 레이어의 필드로 설정합니다.\n'
-                      '단축키 실행 시 활성 레이어의 선택 객체만 수정합니다.\n'
-                      '같은 이름의 필드를 가진 다른 레이어에도 적용됩니다.\n'
-                      '기존 값을 덮어쓰며 자동 저장하지 않습니다.')
+        note = QLabel('Configure presets using fields from the active layer.\n'
+                      'Shortcuts change only selected features in the active layer.\n'
+                      'Presets also apply to other layers with matching field names.\n'
+                      'Existing values are overwritten. Changes are not saved automatically.')
         note.setWordWrap(True)
         layout.addWidget(note)
         form = QFormLayout()
@@ -107,15 +107,15 @@ class QuickFieldKeys:
             if not isinstance(preset, dict):
                 preset = {}
             combo = QComboBox()
-            combo.addItem('(사용 안 함)', '')
+            combo.addItem('(Disabled)', '')
             for i in writable_indices(layer):
                 field = layer.fields()[i]
                 combo.addItem(f'{field.name()} ({field.typeName()})', field.name())
             found = combo.findData(preset.get('field', ''))
             combo.setCurrentIndex(max(0, found))
             text = QLineEdit(str(preset.get('value', '')))
-            text.setPlaceholderText('입력값')
-            null = QCheckBox('NULL 입력')
+            text.setPlaceholderText('Value')
+            null = QCheckBox('Set NULL')
             null.setChecked(bool(preset.get('null', False)))
             text.setEnabled(not null.isChecked())
             null.toggled.connect(lambda enabled, widget=text: widget.setEnabled(not enabled))
@@ -138,7 +138,7 @@ class QuickFieldKeys:
                     if name:
                         index = layer.fields().indexFromName(name)
                         if index < 0:
-                            raise ValueError('필드가 없어졌습니다. 설정 창을 다시 여세요.')
+                            raise ValueError('The field no longer exists. Reopen the settings dialog.')
                         converted_value(layer.fields()[index], text.text(), null.isChecked())
                     presets[key] = {'field': name, 'value': text.text(), 'null': null.isChecked()}
             except (ValueError, TypeError, OverflowError) as error:
@@ -157,16 +157,16 @@ class QuickFieldKeys:
             return
         ids = layer.selectedFeatureIds()
         if not ids:
-            self.warn('선택 객체가 없습니다. 아무것도 수정하지 않았습니다.')
+            self.warn('No features selected. Nothing was changed.')
             return
         preset = self.presets.get(key, {})
         if not isinstance(preset, dict) or not preset.get('field'):
-            self.warn(f'Alt+{key}의 필드·값을 먼저 설정하세요.')
+            self.warn(f'Configure a field and value for Alt+{key} first.')
             self.configure()
             return
         index = layer.fields().indexFromName(preset['field'])
         if index < 0 or index not in writable_indices(layer):
-            self.warn('설정 필드가 없거나 수정할 수 없습니다. 필드·값 설정을 확인하세요.')
+            self.warn('The configured field is missing or not writable. Check the preset.')
             return
         try:
             value = converted_value(layer.fields()[index], preset.get('value', ''), preset.get('null', False))
@@ -174,24 +174,24 @@ class QuickFieldKeys:
             self.warn(str(error))
             return
         if layer.readOnly():
-            self.warn('읽기 전용 레이어입니다.')
+            self.warn('The layer is read-only.')
             return
         if not layer.isEditable() and not layer.startEditing():
-            self.warn('편집 모드를 시작할 수 없습니다.')
+            self.warn('Could not start editing the layer.')
             return
-        layer.beginEditCommand(f'Alt+{key}: {preset["field"]} 입력')
+        layer.beginEditCommand(f'Alt+{key}: set {preset["field"]}')
         try:
             for fid in ids:
                 if not layer.changeAttributeValue(fid, index, value, skipDefaultValues=True):
-                    raise RuntimeError(f'객체 {fid} 입력 실패. 이번 실행을 취소했습니다.')
+                    raise RuntimeError(f'Could not update feature {fid}. This operation was reverted.')
             for fid in ids:
                 actual = layer.getFeature(fid).attribute(index)
                 if value is not None and actual != value:
-                    raise RuntimeError('입력값 검증 실패. 이번 실행을 취소했습니다.')
+                    raise RuntimeError('Value verification failed. This operation was reverted.')
                 if value is None:
                     from qgis.core import QgsVariantUtils
                     if not QgsVariantUtils.isNull(actual):
-                        raise RuntimeError('NULL 입력 검증 실패. 이번 실행을 취소했습니다.')
+                        raise RuntimeError('NULL verification failed. This operation was reverted.')
         except Exception as error:
             layer.destroyEditCommand()
             self.warn(str(error))
@@ -199,4 +199,4 @@ class QuickFieldKeys:
         layer.endEditCommand()
         layer.triggerRepaint()
         self.iface.messageBar().pushSuccess(
-            MENU, f'{layer.name()}: 선택 {len(ids)}개 입력. 저장 전 상태이며 실행 취소할 수 있습니다.')
+            MENU, f'{layer.name()}: updated {len(ids)} selected features. Changes are unsaved and can be undone.')

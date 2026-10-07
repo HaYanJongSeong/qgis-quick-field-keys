@@ -1,54 +1,68 @@
 # Quick Field Keys
 
-현재 활성 벡터 레이어의 **선택 객체에만** 필드 값을 입력하는 QGIS 플러그인입니다.
-`Alt+1`부터 `Alt+9`까지 각각 필드와 입력값을 지정합니다.
+A QGIS plugin that assigns attribute values to **selected features in the active
+vector layer** using configurable **Alt+1 through Alt+9** shortcuts.
+Each shortcut has its own field and value or NULL preset.
 
-## 지원 환경
+## Requirements and compatibility
 
-- QGIS 4.2 이상, 4.x. 실제 테스트 환경: Windows, QGIS 4.2.2, Qt 6.11.
-- QGIS 3.x는 이번 공개 버전의 지원 대상이 아닙니다.
-- 외부 Python 패키지, 계정, 네트워크 연결이 필요하지 않습니다.
-- 현재 화면 언어는 한국어입니다. Linux 및 macOS의 실제 실행은 아직 검증하지 않았습니다.
+- QGIS 4.2 or later in the QGIS 4.x series.
+- Tested on Windows with QGIS 4.2.2 and Qt 6.11.
+- QGIS 3.x is not supported by this public release.
+- Linux and macOS execution has not been verified.
+- No external Python packages, accounts or network access are required.
+- The plugin interface and documentation are in English.
 
-## 설치
+## Installation
 
-1. [GitHub Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases)에서
-   `quick_field_keys_1.2.0.zip`을 받습니다. GitHub의 자동 생성 Source code ZIP은 설치 파일이 아닙니다.
-2. QGIS **플러그인 > 플러그인 관리 및 설치 > ZIP 파일에서 설치**에서 해당 파일을 선택합니다.
-3. 업데이트 설치 후에는 QGIS를 재시작합니다. 이전 Alt+1 및 Alt+2 설정도 유지됩니다.
+1. Download `quick_field_keys_1.2.1.zip` from
+   [GitHub Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases).
+   GitHub's automatically generated **Source code** ZIP is not the installation package.
+2. In QGIS, open **Plugins > Manage and Install Plugins > Install from ZIP**.
+3. Select the installation ZIP and enable **Quick Field Keys**.
+4. Restart QGIS after an update. Existing field/value presets are retained.
 
-공식 QGIS 저장소에는 별도 제출과 승인이 필요합니다. GitHub 공개만으로 공식 저장소에 등록되지는 않습니다.
+Publication in the official QGIS plugin repository requires a separate submission
+and approval. A GitHub release does not by itself register the plugin there.
 
-## 사용
+## Usage
 
-1. 대상 벡터 레이어를 활성화합니다.
-2. **플러그인 > 선택 객체 빠른 필드 입력 > 필드·값 설정…**을 엽니다.
-3. 각 Alt+숫자에 필드와 입력값을 지정합니다. NULL을 입력하려면 **NULL 입력**을 체크합니다.
-4. 지도 또는 속성 테이블에서 객체를 선택하고 해당 단축키를 누릅니다.
-5. 결과를 확인한 뒤 QGIS의 **레이어 편집 저장**으로 저장합니다.
+1. Activate the target vector layer.
+2. Open **Plugins > Quick Field Keys > Configure fields and values...**.
+3. Assign a field and a value to each desired shortcut. Check **Set NULL** to
+   assign NULL instead of a typed value. Leave a preset **Disabled** to avoid assigning a value.
+4. Select features on the map or in the attribute table.
+5. Press the configured **Alt+number** shortcut.
+6. Inspect the results, then use QGIS **Save Layer Edits** to save them.
 
-예를 들어 Alt+1에는 `status` 필드의 `완료`, Alt+2에는 같은 필드의 `검토`를 설정할 수 있습니다.
+For example, configure Alt+1 to set `status` to `done`, and Alt+2 to set it to `review`.
+Text values are entered literally, without quotation marks or expression syntax.
 
-## 안전 동작과 제한
+## Safety and limitations
 
-- 선택 객체가 없으면 아무것도 수정하지 않습니다.
-- 기존 값은 덮어씁니다. 자동 저장하지 않으며, 편집 모드는 필요할 때 자동으로 시작합니다.
-- 각 실행은 한 번의 실행 취소로 되돌릴 수 있습니다. 실패하면 이번 실행의 변경만 취소합니다.
-- 기본키, 조인 필드, 표현식 필드는 설정 대상에서 제외합니다.
-- 필드 자료형으로 값을 변환합니다. 잘못된 숫자 등의 입력은 거부합니다.
-- 빈 문자열과 NULL은 다릅니다. NULL은 별도 체크로 지정합니다.
-- 다른 필드의 편집 시 기본값 갱신을 실행하지 않습니다.
-- 설정은 QGIS 프로필에 저장되고 재시작 후에도 유지됩니다.
-- 설정은 레이어별이 아니라 단축키별 공통 설정입니다. 다른 레이어에 같은 이름의 필드가
-  있으면 그 레이어에도 적용됩니다. 실행 전 활성 레이어와 선택 객체를 확인하세요.
-- 필드 제약 조건과 데이터 제공자의 규칙 때문에 저장이 거부될 수 있습니다. 최종 저장 결과도 확인하세요.
-- 많은 객체를 선택하면 QGIS 화면이 일시적으로 응답하지 않을 수 있습니다.
-- 단축키가 충돌하면 **설정 > 키보드 단축키**에서 `빠른 필드 입력 Alt+숫자`를 변경하세요.
+- No selection means no changes.
+- Existing values are overwritten. Changes are **never saved automatically**.
+- Editing starts automatically when necessary.
+- Each operation is one undo command. A failed operation reverts only its own changes.
+- Provider primary keys, joined fields and expression fields are excluded.
+- Values are converted to the target field type. Invalid numeric values are rejected.
+- An empty string is not NULL. Use the explicit **Set NULL** checkbox for NULL.
+- Update defaults on other fields are skipped.
+- Presets are stored in the QGIS profile and survive restarts.
+- Presets are shared across layers, not tied to a layer ID. They also apply to
+  another active layer with the same field name. Always check the active layer and selection.
+- Field constraints or provider rules may reject a final save. Check the save result.
+- Updating a large selection may temporarily block the QGIS interface.
+- Shortcut conflicts can be resolved in **Settings > Keyboard Shortcuts** by
+  searching for **Quick Field Keys: Alt+number**.
+- The English action names differ from earlier Korean releases. If you customized
+  those shortcuts, check your bindings after updating. Field/value presets are unchanged.
 
-## 테스트
+## Tests
 
-실제 프로젝트와 파일을 변경하지 않는 메모리 레이어 테스트입니다.
-QGIS Python 콘솔에서 저장소 위치에 맞게 경로를 바꾸어 실행하세요.
+The regression test creates its own temporary memory layer and does not modify
+the current project or any on-disk data. In the QGIS Python console, adjust the
+repository path and run:
 
 ```python
 from pathlib import Path
@@ -56,23 +70,24 @@ test = Path('/path/to/qgis-quick-field-keys/tests/test_qgis.py')
 exec(compile(test.read_text(encoding='utf-8'), str(test), 'exec'), {'__file__': str(test)})
 ```
 
-Alt+1~9 연결, 설정 창, 기존 설정 유지, 선택 범위, 자료형 변환, NULL, 실행 취소,
-실패 원복, 다른 필드 기본값 유지, 자동 저장하지 않는 동작을 검사합니다.
-실제 키보드 이벤트와 QGIS 플러그인 관리자 설치 과정은 자동 테스트 범위에 포함하지 않습니다.
+Tests cover Alt+1-9 action connections, the settings dialog, preset retention,
+selection scope, type validation, NULL, undo, rollback on failure, skipped update
+defaults and the absence of automatic saves. Real keyboard events and installation
+through QGIS Plugin Manager are not covered by this automated test.
 
-## 배포 파일 만들기
+## Building the installation ZIP
 
 ```sh
 python build_release.py /path/to/output
 ```
 
-배포 ZIP에는 플러그인 소스, 메타데이터, 아이콘, 사용법, GPL 라이선스, 변경 기록만 포함됩니다.
-저장소는 소스 파일만 관리하고 ZIP은 GitHub Release 첨부 파일로 배포합니다.
+The archive contains only the plugin source, metadata, icon, README, license
+and changelog. ZIP files are distributed as GitHub release assets, not committed
+to the source repository.
 
-## 문의와 라이선스
+## Support and license
 
-- [이슈 등록](https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues)
-- 관리: [HaYanJongSeong](https://github.com/HaYanJongSeong)
-- 라이선스: **GPL-3.0-or-later**. 전문은 [LICENSE](LICENSE)를 확인하세요.
-- 공개 메타데이터의 이메일은 GitHub 개인정보 보호용 noreply 주소입니다.
-  실제 문의는 이슈로 남겨주세요. 승인 심사 이메일은 QGIS 사이트 계정의 이메일로 받으세요.
+- Maintainer: [HaYanJongSeong](https://github.com/HaYanJongSeong)
+- Email: kjs4075@live.com
+- Bugs and requests: [GitHub Issues](https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues)
+- License: **GPL-3.0-or-later**. See [LICENSE](LICENSE) for the full text.

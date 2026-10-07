@@ -1,4 +1,4 @@
-"""QGIS Python에서 실행합니다. 메모리 레이어 외에는 수정하지 않습니다."""
+"""Run in QGIS Python. Only a temporary memory layer is modified."""
 import importlib.util
 from pathlib import Path
 from qgis.core import QgsDefaultValue, QgsFeature, QgsField, QgsVectorLayer, QgsVariantUtils
@@ -57,7 +57,7 @@ class TestIface:
         return self.bar
 
 
-layer = QgsVectorLayer('Point?crs=EPSG:4326', '플러그인 메모리 테스트', 'memory')
+layer = QgsVectorLayer('Point?crs=EPSG:4326', 'Plugin memory test', 'memory')
 provider = layer.dataProvider()
 provider.addAttributes([QgsField('status', QMetaType.Type.QString),
                         QgsField('number', QMetaType.Type.Int)])
@@ -65,14 +65,14 @@ layer.updateFields()
 features = []
 for n in range(3):
     feature = QgsFeature(layer.fields())
-    feature.setAttributes(['원래값', n])
+    feature.setAttributes(['original', n])
     features.append(feature)
 assert provider.addFeatures(features)[0]
 layer.setDefaultValueDefinition(1, QgsDefaultValue('99', True))
 ids = [f.id() for f in layer.getFeatures()]
 fake = TestIface(layer)
 plugin = module.QuickFieldKeys(fake)
-plugin.presets = {'1': {'field': 'status', 'value': '완료', 'null': False},
+plugin.presets = {'1': {'field': 'status', 'value': 'done', 'null': False},
                   '2': {'field': 'number', 'value': '12', 'null': False}}
 plugin.initGui()
 assert set(fake.shortcuts) == {f'Alt+{n}' for n in range(1, 10)}
@@ -83,16 +83,16 @@ assert fake.bar.messages[-1][0] == 'warning'
 layer.selectByIds(ids[:2])
 fake.shortcuts['Alt+1'].trigger()
 assert layer.isEditable()
-assert [layer.getFeature(fid)['status'] for fid in ids] == ['완료', '완료', '원래값']
+assert [layer.getFeature(fid)['status'] for fid in ids] == ['done', 'done', 'original']
 assert [layer.getFeature(fid)['number'] for fid in ids] == [0, 1, 2]
 assert fake.bar.messages[-1][0] == 'success'
 layer.undoStack().undo()
-assert all(layer.getFeature(fid)['status'] == '원래값' for fid in ids)
+assert all(layer.getFeature(fid)['status'] == 'original' for fid in ids)
 
 plugin.apply('2')
 assert [layer.getFeature(fid)['number'] for fid in ids] == [12, 12, 2]
 layer.undoStack().undo()
-plugin.presets['2']['value'] = '숫자 아님'
+plugin.presets['2']['value'] = 'not a number'
 plugin.apply('2')
 assert [layer.getFeature(fid)['number'] for fid in ids] == [0, 1, 2]
 assert fake.bar.messages[-1][0] == 'warning'
@@ -101,7 +101,7 @@ plugin.apply('2')
 assert all(QgsVariantUtils.isNull(layer.getFeature(fid)['number']) for fid in ids[:2])
 layer.undoStack().undo()
 
-# Alt+3부터 Alt+9까지 각 QAction이 자기 설정을 사용해야 합니다.
+# Each QAction must apply its own preset, including Alt+3 through Alt+9.
 for n in range(3, 10):
     plugin.presets[str(n)] = {'field': 'number', 'value': str(n), 'null': False}
     fake.shortcuts[f'Alt+{n}'].trigger()
@@ -109,9 +109,9 @@ for n in range(3, 10):
     assert fake.bar.messages[-1][0] == 'success'
     layer.undoStack().undo()
 
-# 실행 도중 실패하더라도 기존 편집 내용은 유지하고 이번 명령만 취소합니다.
-layer.beginEditCommand('기존 사용자 편집')
-assert layer.changeAttributeValue(ids[2], 0, '기존 편집 유지')
+# Revert a failed operation without discarding pre-existing edits.
+layer.beginEditCommand('Existing user edit')
+assert layer.changeAttributeValue(ids[2], 0, 'keep existing edit')
 layer.endEditCommand()
 original_change = layer.changeAttributeValue
 calls = []
@@ -126,11 +126,11 @@ layer.changeAttributeValue = fail_second
 plugin.apply('1')
 layer.changeAttributeValue = original_change
 assert fake.bar.messages[-1][0] == 'warning'
-assert [layer.getFeature(fid)['status'] for fid in ids] == ['원래값', '원래값', '기존 편집 유지']
-assert [f['status'] for f in provider.getFeatures()] == ['원래값'] * 3
+assert [layer.getFeature(fid)['status'] for fid in ids] == ['original', 'original', 'keep existing edit']
+assert [f['status'] for f in provider.getFeatures()] == ['original'] * 3
 assert layer.rollBack()
 
-# 설정 창 생성은 검사하지만 설정 저장이나 실제 QGIS 창 변경은 하지 않습니다.
+# Construct the dialog without saving settings or modifying the real QGIS window.
 original_dialog = module.QDialog
 
 
@@ -153,4 +153,4 @@ finally:
     module.QDialog = original_dialog
 plugin.unload()
 assert not fake.shortcuts
-print('PASS: Alt+1~9, 설정 창, 기존 설정 유지, 선택 객체만 변경, 다른 필드 기본값 업데이트 방지, 선택 없음 무수정, 자료형 검증, NULL, 실행 취소, 실패 원복, 자동 저장 없음')
+print('PASS: Alt+1-9, settings dialog, preset preservation, selected features only, no update defaults, no-selection safety, type validation, NULL, undo, failure rollback, no automatic save')

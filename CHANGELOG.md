@@ -1,19 +1,25 @@
-# 변경 기록
+# Changelog
+
+## 1.2.1
+
+- Translate the interface, documentation, tests and source comments into English.
+- Provide a maintainer email for official repository correspondence.
+- Preserve existing field/value presets and document shortcut-name changes.
 
 ## 1.2.0
 
-- 공식 저장소 제출을 위한 공개 소스, 설명, 라이선스, 아이콘 및 연락 경로를 추가했습니다.
-- 검증하지 않은 QGIS 3.x를 지원 범위에서 제외하고 QGIS 4.2 이상으로 지정했습니다.
-- 지정 필드 외의 필드가 기본값 자동 갱신으로 바뀌지 않도록 했습니다.
-- 실제 프로젝트를 건드리지 않는 테스트와 재현 가능한 ZIP 생성 명령을 추가했습니다.
+- Prepare public source, documentation, license, icon and support links.
+- Limit the supported range to QGIS 4.2+; untested QGIS 3.x is excluded.
+- Prevent unrelated fields from changing through update defaults.
+- Add an isolated memory-layer regression test and a reproducible ZIP builder.
 
 ## 1.1.0
 
-- Alt+1부터 Alt+9까지 설정할 수 있도록 확장했습니다.
-- 설정 창을 단축키마다 한 줄로 정리했습니다.
+- Extend configuration to Alt+1 through Alt+9.
+- Use one compact settings row per shortcut.
 
 ## 1.0.0
 
-- Alt+1 및 Alt+2로 선택 객체의 필드 값을 입력합니다.
-- NULL, 입력 자료형 검사, 실행 취소, 실패 시 이번 실행 원복을 지원합니다.
-- 자동 저장하지 않습니다.
+- Assign field values to selected features using Alt+1 and Alt+2.
+- Support NULL, type validation, undo and rollback on failure.
+- Never save edits automatically.
