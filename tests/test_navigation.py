@@ -119,6 +119,22 @@ assert navigation_row.itemAt(0).widget() is nav.position
 assert [navigation_row.itemAt(i).widget().objectName() for i in range(1, 5)] == [
     'first_feature', 'previous_feature', 'next_feature', 'last_feature']
 assert not nav.back_button.icon().isNull()
+assert not nav.flash_button.icon().isNull() and nav.flash_button.isEnabled()
+navigation_flashes = []
+fake.canvas.flashFeatureIds = lambda target, targets: navigation_flashes.append((target, list(targets)))
+selection_before_flash = set(layer.selectedFeatureIds())
+extent_before_flash = fake.canvas.extent().toString(8)
+fake.layer = other
+nav.flash_button.click()
+assert navigation_flashes[-1] == (layer, list(layer.selectedFeatureIds()))
+assert set(layer.selectedFeatureIds()) == selection_before_flash
+assert fake.canvas.extent().toString(8) == extent_before_flash and fake.activeLayer() is other
+layer.removeSelection()
+assert not nav.flash_button.isEnabled()
+flash_count = len(navigation_flashes)
+nav.flash_selected()
+assert len(navigation_flashes) == flash_count
+layer.selectByIds(list(selection_before_flash))
 for name in ('first_feature', 'previous_feature', 'next_feature', 'last_feature'):
     button = nav.findChild(QToolButton, name)
     assert button is not None and not button.icon().isNull()
@@ -167,6 +183,7 @@ nav.ascending.setChecked(True)
 fake.layer = other
 nav.go_to(0)
 assert fake.activeLayer() is layer
+assert navigation_flashes[-1] == (layer, [ids[1]]), 'Navigation must flash the new selection'
 assert layer.selectedFeatureIds() == [ids[1]]
 assert '1 / 4' in nav.position.text()
 assert 'rank: 1' in nav.position.text()
@@ -203,7 +220,9 @@ assert not any('zoom failed' in str(message) for message in fake.messages.rows)
 assert fake.canvas.extent().center().x() > 1000000, 'Zoom must transform WGS84 coordinates to the canvas CRS'
 extent_before = fake.canvas.extent().toString(8)
 nav.zoom_mode.setCurrentIndex(3)
+flash_count = len(navigation_flashes)
 nav.go_to(1)
+assert len(navigation_flashes) == flash_count + 1, 'No zoom must still flash on navigation'
 assert fake.canvas.extent().toString(8) == extent_before
 assert not nav.scale.isEnabled()
 nav.zoom_mode.setCurrentIndex(2)
@@ -212,10 +231,11 @@ nav.zoom_mode.setCurrentIndex(0)
 nav.go_to(0)
 plugin.apply('1')
 assert layer.getFeature(ids[1])['status'] == 'done'
+assert nav.save_button.isEnabled(), 'File Save must enable after an immediately applied preset'
 inline = nav.inline_editor
 inline.rows['status'][0].setValue('inline verified')
 assert inline.has_form_edits() and inline.save_button.isEnabled()
-inline.save_button.click()
+inline.apply_form()
 assert layer.getFeature(ids[1])['status'] == 'inline verified'
 nav.undo_button.click()
 assert layer.getFeature(ids[1])['status'] == 'original', 'Undo must restore the whole consecutive feature edit group'
@@ -647,7 +667,7 @@ class ShortcutSettingsDialog(original_shortcut_dialog):
         assert edits['preset_9'].keySequence().isEmpty()
         assert plugin.shortcut_key('preset_9') == 'Alt+9', 'Clearing the dialog input must not apply until Save'
         for name, key in {'undo': 'Ctrl+Alt+U', 'next': 'Ctrl+Alt+N', 'refresh': 'Ctrl+Alt+R',
-                          'save_feature': 'Ctrl+Alt+F10', 'lock_field': 'Ctrl+Alt+L'}.items():
+                          'save_feature': 'Ctrl+Alt+F10', 'lock_field': 'Ctrl+Alt+L', 'flash': 'Ctrl+Alt+F9'}.items():
             edits[name].setKeySequence(QKeySequence(key))
         if globals().get('shortcut_screenshot_path'):
             self.ensurePolished()
@@ -667,6 +687,7 @@ assert feature_nav.undo_button.shortcut().toString() == 'Ctrl+Alt+U'
 assert feature_nav.shortcuts[1].key().toString() == 'Ctrl+Alt+N'
 assert feature_nav.filter_refresh.shortcut().toString() == 'Ctrl+Alt+R'
 assert feature_nav.inline_editor.save_button.shortcut().toString() == 'Ctrl+Alt+F10'
+assert feature_nav.flash_button.shortcut().toString() == 'Ctrl+Alt+F9'
 assert 'Ctrl+Alt+U' in feature_nav.undo_button.toolTip()
 assert plugin.shortcut_key('preset_9') == ''
 assert core.QuickFieldKeys(fake).shortcut_key('undo') == 'Ctrl+Alt+U'
@@ -695,13 +716,60 @@ if globals().get('final_panel_screenshot'):
     assert feature_nav.grab().save(str(final_panel_screenshot))
     feature_nav.inline_editor.load_rows()
 fake.canvas.flashFeatureIds = original_flash
+# File Save commits the designated layer, not the active QGIS layer.
+feature_nav.inline_editor.load_rows()
+if feature_nav.inline_editor.rows['rank'][1].isChecked():
+    feature_nav.inline_editor.rows['rank'][1].click()
+polygon.selectByIds([first])
+fake.layer = layer
+assert plugin.apply_changes(polygon, {(first, 'status'): 'file saved'}, 'Save immediate preset')
+assert feature_nav.save_button.isEnabled()
+feature_nav.save_button.click()
+assert next(f for f in polygon.dataProvider().getFeatures() if f.id() == first)['status'] == 'file saved'
+assert not polygon.isModified() and polygon.isEditable()
+assert not feature_nav.save_button.isEnabled()
+assert not plugin.applied_history and not plugin.undo_edit(polygon)
+assert fake.activeLayer() is layer and not layer.isEditable()
+
+# Stage and type into the form: Save applies both, then commits all layer edits.
+plugin.immediate = False
+plugin.apply('1')
+assert feature_nav.save_button.isEnabled()
+feature_nav.inline_editor.rows['rank'][0].setValue(123)
+assert feature_nav.save_current_fields()
+stored = next(f for f in polygon.dataProvider().getFeatures() if f.id() == first)
+assert stored['status'] == plugin.presets['1']['value'] and stored['rank'] == 123
+assert not plugin.pending_changes and not polygon.isModified()
+plugin.immediate = True
+
+# External edits also enable Save; commit failure retains the edit buffer and history.
+assert polygon.changeAttributeValue(first, polygon.fields().indexFromName('status'), 'external edit')
+assert feature_nav.save_button.isEnabled()
+original_commit = polygon.commitChanges
+polygon.commitChanges = lambda stopEditing=True: False
+assert not feature_nav.save_current_fields()
+assert polygon.isModified() and feature_nav.save_button.isEnabled()
+assert polygon.getFeature(first)['status'] == 'external edit'
+polygon.commitChanges = original_commit
+assert feature_nav.save_current_fields()
+assert not feature_nav.save_button.isEnabled()
+
+# Locked drafts cannot be applied or committed by Save.
+feature_nav.inline_editor.rows['status'][1].click()
+plugin.immediate = False
+plugin.apply('1')
+assert not plugin.pending_changes and not feature_nav.save_button.isEnabled()
+feature_nav.inline_editor.rows['status'][1].click()
+plugin.immediate = True
 feature_nav.shutdown()
 feature_nav.deleteLater()
 plugin.dock_widget = None
 project.clear()
-print('PASS: requested panel order, no Find/Pick controls, direct column chooser, one-icon integration, native expression builder, automatic navigation, Previous wrap, filter-independent view history, chosen-field multi-edit, captured targets, Undo, remembered state, schema change, removed-target recovery, no file save')
+print('PASS: requested panel order, no Find/Pick controls, direct column chooser, one-icon integration, native expression builder, automatic navigation, Previous wrap, filter-independent view history, chosen-field multi-edit, captured targets, Undo, remembered state, schema change, removed-target recovery, no automatic file save')
 print('PASS: grouped feature Undo, repeated fields, filter-independent selection/focus/flash, No zoom override, foreign-field preservation, conflict blocking, external-Undo invalidation, atomic failure/retry, commit boundary')
 print('PASS: filter membership frozen during edits, draft expressions and sorting; clear is draft-only; explicit refresh applies the filter')
 print('PASS: no Change checkboxes, automatic modified-field tracking, feature-save icon, persistent right-side locks, shortcut/staging/Apply/Undo lock guards, atomic locked batches')
 print('PASS: settings icon, native key-sequence dialog, live remapping, reload persistence, unassigned keys, duplicate/bare-key/external-conflict guards')
 print('PASS: designated target independent of active QGIS layer or dock visibility, no unrelated-layer writes, pinned staged targets')
+print('PASS: explicit file Save, immediate/staged/form/external edits enable Save, designated-layer-only commit, keep editing, saved Undo boundary, failed commit retains edits, locks')
+print('PASS: bulb button flashes designated-layer selection without changing selection/view/active layer; automatic navigation flash including No zoom')

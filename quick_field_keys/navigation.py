@@ -110,6 +110,13 @@ class QuickFieldNavigator(QDockWidget):
         self.back_button.clicked.connect(self.back_view)
         row.addSpacing(12)
         row.addWidget(self.back_button)
+        self.flash_button = QToolButton(self)
+        self.flash_button.setObjectName('flash_selected_features')
+        self.flash_button.setIcon(QIcon(str(Path(__file__).with_name('flash_features.svg'))))
+        self.flash_button.setAccessibleName('Flash selected features / 선택 객체 반짝임')
+        self.flash_button.setToolTip('Flash selected features — Flash the designated layer\'s current selection without changing selection, zoom or values. Navigation flashes automatically.\n선택 객체 반짝임 — 지정 레이어의 현재 선택 객체를 반짝입니다. 선택·줌·값을 바꾸지 않으며 객체 이동 시에도 자동으로 반짝입니다.')
+        self.flash_button.clicked.connect(self.flash_selected)
+        row.addWidget(self.flash_button)
         self.zoom_mode = QComboBox()
         self.zoom_mode.addItems(['Fit feature', 'Keep current scale', 'Fixed scale', 'No zoom'])
         self.zoom_mode.setToolTip('Zoom mode — Fit feature, keep scale, fixed scale, or no zoom when navigating.\n줌 방식 — 객체 맞춤, 현재 축척 유지, 고정 축척, 줌 안 함 중 선택합니다.')
@@ -202,7 +209,8 @@ class QuickFieldNavigator(QDockWidget):
         self.save_button = QToolButton(self)
         self.save_button.setObjectName('save_feature_edits')
         self.save_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
-        self.save_button.setToolTip('Save feature edits — Apply modified, unlocked fields to the edit buffer; file save is separate.\n피처 편집 저장 — 수정한 잠금 해제 필드를 편집 버퍼에 반영합니다. 파일 저장은 별도입니다.')
+        self.save_button.setAccessibleName('Save target layer / 대상 레이어 파일 저장')
+        self.save_button.setToolTip('Save target layer — Apply draft fields and pending presets, then save ALL unsaved edits in the designated layer to its data source. Saved edits cannot be restored by feature Undo.\n대상 레이어 파일 저장 — 미적용 필드와 대기 프리셋을 반영한 뒤 지정 레이어의 모든 미저장 편집을 파일에 저장합니다. 다른 도구의 편집도 함께 저장하며 저장 후 객체 Undo로 되돌릴 수 없습니다.')
         self.save_button.setEnabled(False)
         self.save_button.clicked.connect(self.save_current_fields)
         row.addWidget(self.save_button)
@@ -287,6 +295,8 @@ class QuickFieldNavigator(QDockWidget):
             self.layer.updatedFields.connect(self.refresh_fields)
             self.layer.featureAdded.connect(self.update_position)
             self.layer.featureDeleted.connect(self.update_position)
+            for signal in ('layerModified', 'editingStopped', 'afterCommitChanges', 'afterRollBack'):
+                getattr(self.layer, signal).connect(self.refresh_save_state)
         if self.selected_only.isChecked() and self.layer is not None:
             self.selection_snapshot = set(self.layer.selectedFeatureIds())
         self.reload_features()
@@ -418,8 +428,21 @@ class QuickFieldNavigator(QDockWidget):
         self.index = index
         if self.zoom_mode.currentIndex() != 3 and feature.hasGeometry():
             self.zoom_to(feature)
+        self.flash_selected()
         self.update_position()
         self.save_session()
+
+    def flash_selected(self, *args, layer=None):
+        target = layer if layer is not None else self.layer
+        if target is None or not target.isValid():
+            return
+        ids = target.selectedFeatureIds()
+        if not ids:
+            return
+        try:
+            self.iface.mapCanvas().flashFeatureIds(target, ids)
+        except Exception as error:
+            self.plugin.warn(f'Feature flash failed / 객체 반짝임 실패: {error}')
 
     def remember_view(self):
         canvas = self.iface.mapCanvas()
@@ -468,6 +491,8 @@ class QuickFieldNavigator(QDockWidget):
         self.update_position()
         self.save_session()
 
+        self.flash_selected(layer=layer)
+
     def zoom_to(self, feature):
         canvas = self.iface.mapCanvas()
         try:
@@ -496,6 +521,7 @@ class QuickFieldNavigator(QDockWidget):
             self.plugin.warn(f'Feature selected, but zoom failed: {error}')
 
     def update_position(self, *args):
+        self.flash_button.setEnabled(self.layer is not None and self.layer.isValid() and self.layer.selectedFeatureCount() > 0)
         self.sync_inline_fields()
         if not self.ids:
             self.position.setText('No matching features')
@@ -532,8 +558,45 @@ class QuickFieldNavigator(QDockWidget):
         return True
 
     def save_current_fields(self, *args):
-        if self.inline_editor is not None:
-            self.inline_editor.apply_form()
+        layer = self.layer
+        if layer is None or not layer.isValid() or layer.readOnly():
+            self.plugin.warn('Choose a writable target layer. / 저장 가능한 대상 레이어를 지정하세요.')
+            return False
+        if self.plugin.pending_changes and self.plugin.pending_layer is not layer:
+            self.plugin.warn('Pending presets belong to another layer. Apply or discard them first. / 다른 레이어의 대기 프리셋을 먼저 적용하거나 폐기하세요.')
+            return False
+        changes = dict(self.plugin.pending_changes)
+        editor = self.inline_editor
+        if editor is not None and editor.layer is layer:
+            changes.update(editor.form_changes())
+        if changes:
+            if not self.plugin.apply_changes(layer, changes, 'Apply drafts before file save'):
+                return False
+            self.plugin.discard_pending()
+            editor.load_rows()
+        if not layer.isEditable() or not layer.isModified():
+            self.refresh_save_state()
+            return False
+        if not layer.commitChanges(False):
+            self.plugin.warn('File save failed; edits remain available. / 파일 저장 실패. 편집을 유지합니다.\n' + '\n'.join(layer.commitErrors()))
+            self.refresh_save_state()
+            return False
+        self.plugin.clear_feature_history(layer.id())
+        self.update_position()
+        self.plugin.iface.messageBar().pushSuccess('Quick Field Keys', f'{layer.name()}: saved all layer edits. / 레이어의 모든 편집을 파일에 저장했습니다.')
+        return True
+
+    def refresh_save_state(self, *args):
+        layer = self.layer
+        editor = self.inline_editor
+        try:
+            valid = layer is not None and layer.isValid() and not layer.readOnly()
+            pending = bool(self.plugin.pending_changes) and self.plugin.pending_layer is layer
+            draft = editor is not None and editor.layer is layer and editor.has_form_edits()
+            enabled = valid and (draft or pending or (layer.isEditable() and layer.isModified()))
+        except RuntimeError:
+            enabled = False
+        self.save_button.setEnabled(bool(enabled))
 
     def sync_inline_fields(self):
         editor = self.inline_editor
@@ -562,6 +625,7 @@ class QuickFieldNavigator(QDockWidget):
         editor.ids = selected
         editor.scope.hide()
         editor.load_rows()
+        self.refresh_save_state()
 
     def update_shortcuts(self, *args):
         import qgis.utils
@@ -584,6 +648,8 @@ class QuickFieldNavigator(QDockWidget):
             'columns': self.columns_button, 'refresh': self.filter_refresh, 'clear': self.filter_clear,
             'capture': self.capture_button, 'scope': self.selected_only, 'settings': self.settings_button,
             'immediate': self.immediate, 'expression': self.expression_button,
+            'save_feature': self.save_button,
+            'flash': self.flash_button,
         }
         for shortcut in self.shortcuts:
             shortcut.setKey(QKeySequence(self.plugin.shortcut_key(shortcut.objectName())))
@@ -665,6 +731,8 @@ class QuickFieldNavigator(QDockWidget):
         for name, callback in (
             ('selectionChanged', self.selection_changed), ('updatedFields', self.refresh_fields),
             ('featureAdded', self.update_position), ('featureDeleted', self.update_position),
+            ('layerModified', self.refresh_save_state), ('editingStopped', self.refresh_save_state),
+            ('afterCommitChanges', self.refresh_save_state), ('afterRollBack', self.refresh_save_state),
         ):
             try:
                 getattr(self.layer, name).disconnect(callback)

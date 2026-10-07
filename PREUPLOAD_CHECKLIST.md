@@ -1,6 +1,6 @@
 # QGIS repository pre-upload checklist
 
-Release reviewed: **1.7.3**, on **2026-10-07**.
+Release reviewed: **1.7.6**, on **2026-10-07**. This release changes documentation and metadata; runtime behavior is unchanged from tested version 1.7.5.
 
 The authenticated add-version form for plugin **6547** was inspected in the existing
 browser session. All six checklist statements were reviewed. The 68 mandatory
@@ -12,7 +12,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 | Non-empty public source repository matching the ZIP, without compiled files | Verified locally by byte comparison; the repository is public. No ZIP or compiled files are committed. |
 | Meaningful description written in English | Verified: English comes first in `description` and `about`, followed by Korean. README and button tooltips are bilingual; source comments are English. |
 | Public, valid homepage, tracker and repository URLs | Public GitHub README, source repository and enabled issue tracker are configured. |
-| This version has been tested with QGIS and works as expected | Both regression scripts passed in QGIS 4.2.2 on isolated memory layers. Native dialog controls, key binding state, editing, Undo and rollback were exercised. Physical keyboard input and installation of this ZIP through Plugin Manager remain separate manual tests. |
+| This version has been tested with QGIS and works as expected | Both regression scripts passed for the same runtime code in version 1.7.5, including explicit Save and automatic/manual flash. A separate isolated GeoPackage save/reopen check passed during 1.7.4 work. QGIS MCP is currently disconnected, so a fresh 1.7.6 runtime test has not been run. Physical keyboard input and Plugin Manager installation remain manual checks. |
 | Consent to email contact and ongoing maintenance correspondence | The maintainer supplied `kjs4075@live.com`, previously submitted this plugin and authorized the latest upload. The portal reports Email confirmed. Mailbox delivery has not been tested. |
 
 ## Additional publishing requirements
@@ -30,7 +30,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 
 ## Manual test before submission
 
-1. Install `quick_field_keys_1.7.3.zip` using **Install from ZIP** and restart QGIS.
+1. Install `quick_field_keys_1.7.6.zip` using **Install from ZIP** and restart QGIS.
 2. Use a disposable layer, not production data. Configure all nine presets.
 3. Select two features out of three. Try each Alt+1 through Alt+9 shortcut.
 4. Confirm only selected features change and QGIS does not save automatically.
@@ -41,8 +41,10 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 9. Test inline column editing, locks, the feature-save icon, grouped feature Undo and both shortcut application modes.
 10. Test the shortcut-settings gear, remapping and persistence. Disable FeatureNavEd for overlapping navigation keys.
 11. Activate another QGIS layer and confirm preset writes still affect only the navigator's designated target.
+12. Confirm the disk button saves all target-layer edits, including external edits, and leaves editing enabled. Saved changes must not be restored by feature Undo.
+13. Test the bulb button and automatic flashes, including No zoom mode and empty selections.
 
-## Automated checks completed for 1.7.3
+## Runtime checks completed for 1.7.5
 
 - Selected-feature preset writes, type/NULL conversion and failed-operation rollback.
 - Navigator order, wrap-around, previous-view history, CRS zoom and manual-only filter evaluation.
@@ -50,7 +52,14 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 - Grouped feature Undo, focus/flash calls, conflict protection, atomic retry and edit-session/save boundaries.
 - Shortcut configuration, duplicate/external conflicts, registration-failure rollback and settings persistence.
 - Designated-target behavior independent of active layer or hidden panel state.
-- ZIP CRC, metadata, source-file equality and absence of compiled files.
+- Explicit Save activation for immediate, staged, form and external edits; commit failure retention and saved Undo boundaries.
+- Manual multi-selection flash and automatic navigation flash, including No zoom; empty selection and shortcut remapping.
+
+## Packaging checks for 1.7.6
+
+- Check ZIP CRC, metadata, source-file equality and absence of compiled files before uploading.
+- Check the README screenshots and identify test fields/bindings as examples.
+- Run im-not-ai v2.3.2 text metrics and change-rate checks without installing it globally.
 
 ## Sources
 

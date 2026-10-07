@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.7.6
+
+- Add example panel and shortcut-settings screenshots to the README.
+- Rewrite the GitHub and QGIS descriptions, keeping the installation steps, compatibility limits and Save/Undo warnings.
+- Use im-not-ai v2.3.2 to review the Korean wording. No runtime changes from 1.7.5.
+
+## 1.7.5
+
+- Add a bulb icon beside previous-view restoration to flash all currently selected features in the designated layer without changing selection, extent or the active layer. Disable it when there is no selection.
+- Automatically flash the destination on First/Previous/Next/Last and previous-view restoration, including No zoom mode.
+- Add Flash selected features to shortcut settings, initially unassigned.
+- Verify manual multi-selection flash, designated-target safety and automatic navigation flash in isolated QGIS regression tests.
+
+## 1.7.4
+
+- Change the disk button, by maintainer request, from draft-only application to explicit saving of all unsaved edits in the designated layer.
+- Enable Save for immediate presets, drafts, staged presets and external edits. Apply drafts and staged presets before committing; form input takes precedence when both target the same field.
+- Keep editing enabled after Save. Clear saved feature Undo history; report commit errors without rolling back failed edits. Never commit an unrelated active layer.
+- Verify activation, commit, staged/form values, locks, failure retention and saved Undo boundaries in regression tests. Verify an isolated GeoPackage by reopening it through a fresh provider.
+
 ## 1.7.3
 
 - Replace legacy field-origin and vector-layer filter enum aliases with explicit scoped enums required by the official Qt6 compatibility checker. Runtime behavior is unchanged.

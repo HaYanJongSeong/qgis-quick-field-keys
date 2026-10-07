@@ -23,6 +23,8 @@ class FieldEditor(QDialog):
     def __init__(self, plugin, layer, embedded=False, parent=None, save_button=None):
         super().__init__(parent or plugin.iface.mainWindow())
         self.embedded = embedded
+        self.shared_save = save_button is not None
+        self.save_owner = parent
         if embedded:
             self.setWindowFlags(Qt.WindowType.Widget)
         self.plugin = plugin
@@ -72,10 +74,12 @@ class FieldEditor(QDialog):
             self.save_button = save_button if save_button is not None else QToolButton(self)
             self.save_button.setObjectName('save_feature_edits')
             self.save_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
-            self.save_button.setAccessibleName('Save feature edits / 피처 편집 저장')
+            if not self.shared_save:
+                self.save_button.setAccessibleName('Apply feature edits / 피처 편집 반영')
             self.save_button.setShortcut(QKeySequence(plugin.shortcut_key('save_feature')))
-            self.save_button.setToolTip('Save feature edits — Apply modified, unlocked columns to this captured selection in the edit buffer. This does not save the data file.\n피처 편집 저장 — 실제 수정한 잠금 해제 컬럼만 고정된 선택 객체의 편집 버퍼에 반영합니다. 실제 파일 저장은 별도입니다.')
-            self.save_button.setEnabled(False)
+            if not self.shared_save:
+                self.save_button.setToolTip('Apply feature edits — Apply modified, unlocked columns to the edit buffer.\n피처 편집 반영 — 수정한 잠금 해제 컬럼을 편집 버퍼에 반영합니다.')
+            self.refresh_save_state()
             if save_button is None:
                 self.save_button.clicked.connect(self.apply_form)
                 row = QHBoxLayout()
@@ -132,7 +136,7 @@ class FieldEditor(QDialog):
         self.changed_fields = set()
         self.initial_values = {}
         if hasattr(self, 'save_button'):
-            self.save_button.setEnabled(False)
+            self.refresh_save_state()
         if self.layer is None:
             return
         features = [self.layer.getFeature(fid) for fid in self.ids]
@@ -155,7 +159,7 @@ class FieldEditor(QDialog):
             self.initial_values[name] = (same, values[0] if same else None)
             for button in editor.findChildren(QToolButton):
                 if not button.toolTip():
-                    button.setToolTip(f'Field input control — Change the input for {name}; use the save-feature icon to apply it to the edit buffer.\n필드 입력 도구 — {name}의 입력값을 바꿉니다. 피처 저장 아이콘을 눌러야 편집 버퍼에 반영됩니다.')
+                    button.setToolTip(f'Field input control — Change {name}. The navigator Save icon applies drafts and saves all target-layer edits.\n필드 입력 도구 — {name}의 입력값을 바꿉니다. 이동 패널의 저장 아이콘은 입력을 반영하고 대상 레이어의 모든 편집을 파일에 저장합니다.')
             lock = QToolButton(self.form_widget)
             lock.setObjectName(f'lock_{name}')
             lock.setCheckable(True)
@@ -178,6 +182,12 @@ class FieldEditor(QDialog):
         else:
             self.changed_fields.add(name)
         if hasattr(self, 'save_button'):
+            self.refresh_save_state()
+
+    def refresh_save_state(self):
+        if self.shared_save:
+            self.save_owner.refresh_save_state()
+        else:
             self.save_button.setEnabled(bool(self.changed_fields))
 
     def refresh_field_lock(self, name):
@@ -213,7 +223,7 @@ class FieldEditor(QDialog):
         QgsSettings().setValue(f'quick_field_keys/locked_fields/{self.layer.id()}', json.dumps(sorted(names)))
         self.refresh_field_lock(name)
         if hasattr(self, 'save_button'):
-            self.save_button.setEnabled(bool(self.changed_fields))
+            self.refresh_save_state()
 
     @staticmethod
     def equal(left, right):
@@ -277,12 +287,15 @@ class FieldEditor(QDialog):
             QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes
 
     def apply_form(self, checked=False):
-        changes = {(fid, name): wrapper.value()
-                   for name, (wrapper, lock) in self.rows.items() if name in self.changed_fields and not lock.isChecked()
-                   for fid in self.ids}
+        changes = self.form_changes()
         if self.plugin.apply_changes(self.layer, changes, 'Apply chosen fields'):
             self.load_rows()
             self.refresh_status()
+
+    def form_changes(self):
+        return {(fid, name): wrapper.value()
+                    for name, (wrapper, lock) in self.rows.items() if name in self.changed_fields and not lock.isChecked()
+                    for fid in self.ids}
 
     def apply_pending(self, checked=False):
         if self.plugin.pending_layer is not None and self.plugin.pending_layer is not self.layer:

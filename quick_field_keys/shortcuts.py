@@ -19,6 +19,7 @@ ACTIONS.update({
     'next': ('Next / 다음', 'Alt+Right'),
     'last': ('Last / 끝', 'Alt+End'),
     'back': ('Previous view / 직전 화면', 'Alt+Backspace'),
+    'flash': ('Flash selected features / 선택 객체 반짝임', ''),
     'undo': ('Feature Undo / 객체 실행 취소', 'Alt+Z'),
     'presets': ('Field value presets / 필드 값 설정', ''),
     'columns': ('Visible columns / 표시 컬럼 선택', ''),
@@ -31,7 +32,7 @@ ACTIONS.update({
     'zoom': ('Cycle zoom mode / 줌 방식 순환', ''),
     'layer': ('Choose layer / 레이어 선택', ''),
     'sort': ('Choose sort field / 정렬 필드 선택', ''),
-    'save_feature': ('Save feature edits / 피처 편집 저장', ''),
+    'save_feature': ('Save target layer to file / 대상 레이어 파일 저장', ''),
     'lock_field': ('Lock/unlock focused field / 포커스 필드 잠금 전환', ''),
     'settings': ('Shortcut settings / 단축키 설정', ''),
 })
@@ -78,7 +79,7 @@ def configure(plugin):
     dialog.setWindowTitle('Shortcut settings / 단축키 설정')
     dialog.resize(640, 560)
     layout = QVBoxLayout(dialog)
-    note = QLabel('Press Ctrl/Alt/Meta + a key, or a function key. Clear a box to disable its shortcut.\nCtrl/Alt/Meta 조합이나 기능키를 누르세요. 비우면 단축키를 사용하지 않습니다.\nFile save remains separate / 피처 저장은 편집 버퍼 반영이며 실제 파일 저장은 별도입니다.')
+    note = QLabel('Press Ctrl/Alt/Meta + a key, or a function key. Clear a box to disable its shortcut.\nCtrl/Alt/Meta 조합이나 기능키를 누르세요. 비우면 단축키를 사용하지 않습니다.\nSave commits ALL target-layer edits / 저장은 대상 레이어의 모든 미저장 편집을 파일에 반영합니다.')
     note.setWordWrap(True)
     layout.addWidget(note)
     scroll = QScrollArea()

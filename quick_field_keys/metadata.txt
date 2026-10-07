@@ -1,25 +1,27 @@
 [general]
 name=Quick Field Keys
-description=Navigate and edit a designated layer with configurable shortcuts, column locks, feature save and feature Undo. No automatic file save.
-    지정한 레이어를 탐색·편집하고 단축키 변경, 컬럼 잠금, 피처 저장, 객체 Undo를 제공합니다. 파일 자동 저장은 하지 않습니다.
+description=Navigate and edit a designated layer with configurable shortcuts, column locks, explicit layer-wide save and feature Undo. No automatic file save.
+    지정한 레이어를 탐색·편집합니다. 단축키 변경, 컬럼 잠금, 피처 저장, 객체 Undo를 지원합니다. 피처 저장은 대상 레이어 전체의 미저장 편집을 저장하며 파일 자동 저장은 하지 않습니다.
 about=English
-    The navigator's chosen layer is the write target, even if another QGIS layer is active or the panel is hidden. Select features in that designated layer. If no valid target is designated, preset writes stop rather than falling back to another layer. The gear icon to the right of Undo opens per-action shortcut settings, with unassigned keys, defaults, duplicate/conflict checks and remembered bindings.
-    Feature Undo (Alt+Z) restores all consecutive plugin changes to the last edited feature group, selects it, fits the map and flashes it. Other tools and saved edits are protected; conflicting values block restoration. History is limited to 200 groups in the current editing session. Filters re-evaluate only on explicit refresh; edits and Undo keep list membership unchanged. Trash clears the expression input only, pending refresh.
+    The bulb button flashes all currently selected features in the designated layer without changing selection or zoom. Navigation automatically flashes the destination, including No zoom mode and previous-view restoration. You can assign a flash shortcut in the gear dialog.
+    The navigator's chosen layer is the write target, even if another QGIS layer is active or the panel is hidden. Select features in that designated layer. If no valid target is designated, preset writes stop rather than falling back to another layer. The gear icon to the right of Undo opens per-action shortcut settings, where you can leave keys unassigned, restore defaults and check for duplicates or conflicts. Bindings are remembered.
+    Feature Undo (Alt+Z) restores all consecutive plugin changes to the last edited feature group, selects it, fits the map and flashes it. Other tools and saved edits are protected; conflicting values block restoration. History is limited to 200 groups in the current editing session. Filters re-evaluate only on explicit refresh; edits and Undo keep list membership unchanged. Trash clears only the expression input; refresh to apply the change.
     Navigate a vector layer by a chosen sort field in ascending or descending order. Controls are ordered as layer, sorting, expression filter and scope, navigation and zoom, then editing and application. Use First/Previous/Next/Last with an expression filter or a captured selection scope. Find and Pick from map are removed.
-    Alt+Left/Right/Home/End shortcuts are automatic while the panel is visible, unless FeatureNavEd is loaded. Previous wraps from the first feature to the last. The back-arrow button or Alt+Backspace restores the previous selection and map view independently of the filter. Undo uses Alt+Z. One toolbar icon opens the grouped panel, including preset configuration and the native expression builder. Last layer, applied filter, sort order, position and panel geometry are remembered.
-    Click the eye icon to choose visible columns. Current column names and values appear at the panel bottom. Edit directly without Change checkboxes; only modified columns are tracked. Each input ends with a persistent Lock icon that blocks this plugin's form, shortcuts, pending Apply and Undo writes to that column. Other QGIS tools are unaffected. The disk icon applies modified, unlocked inputs to the edit buffer; actual file saving remains a separate QGIS operation. Navigation asks before discarding unapplied inputs; external selections cannot retarget them silently.
-    Toggle Apply presets immediately: on applies to the edit buffer; off stages values in memory for Apply pending shortcuts in the plugin menu. Default preset keys are Alt+1-9 but are customizable. Staged targets are captured when the shortcut is pressed and do not change with later selections. No operation automatically saves the data file.
-    QGIS 4.2+ in the 4.x series. Tested with isolated memory layers on Windows, QGIS 4.2.2. QGIS 3.x is unsupported; Linux/macOS execution has not been verified. English interface, English/Korean documentation. No external packages or network access are required for core features. GPL-3.0-or-later. Navigation design credits: FeatureNavEd by Irene Jaya, MIT license.
+    Alt+Left/Right/Home/End shortcuts are enabled automatically while the panel is visible, unless FeatureNavEd is loaded. Previous wraps from the first feature to the last. The back-arrow button or Alt+Backspace restores the previous selection and map view independently of the filter. Undo uses Alt+Z. One toolbar icon opens the grouped panel, including preset configuration and the native expression builder. Last layer, applied filter, sort order, position and panel geometry are remembered.
+    Click the eye icon to choose columns and edit directly. Locks block this plugin's new writes; other QGIS tools are unaffected. The disk icon applies drafts and pending presets, then explicitly saves all unsaved edits in the designated layer, including other tools' edits. Saved edits cannot be restored by feature Undo. Save keeps editing enabled and reports errors without rolling back the buffer. Drafts retain their original targets.
+    With Apply presets immediately on, presets apply to the edit buffer. With it off, values are staged in memory; use Apply pending shortcuts in the plugin menu to apply them. Default preset keys are Alt+1-9 but are customizable. Staged targets are captured when the shortcut is pressed and do not change with later selections. No operation automatically saves the data file.
+    QGIS 4.2+ in the 4.x series. Tested with isolated memory layers on Windows, QGIS 4.2.2. QGIS 3.x is unsupported; Linux/macOS execution has not been verified. The interface is in English, with English/Korean documentation. No external packages or network access are required for core features. GPL-3.0-or-later. The navigation design draws on FeatureNavEd by Irene Jaya, released under the MIT license.
 
     한국어
-    이동 패널에서 지정한 레이어가 반영 대상입니다. QGIS에서 다른 레이어를 활성화하거나 패널을 숨겨도 지정 레이어의 선택 객체에 적용합니다. 대상이 유효하지 않으면 다른 레이어로 넘어가지 않고 입력을 중단합니다. Undo 오른쪽 톱니바퀴에서 기능별 단축키를 지정·변경·해제하며 기본값 복원, 중복·충돌 검사와 설정 기억을 제공합니다.
-    객체 Undo(Alt+Z)는 마지막 선택 객체에 연속 입력한 플러그인 변경을 함께 복원하고 선택·화면 맞춤·반짝임으로 표시합니다. 다른 도구나 저장한 편집은 보호하고 충돌 값이 있으면 복원을 차단합니다. 이력은 현재 편집 세션의 최근 200묶음입니다. 필터는 명시적인 새로고침 때만 다시 평가하며 편집·Undo로 목록을 바꾸지 않습니다. 쓰레기통은 입력칸만 비우며 새로고침해야 적용됩니다.
-    레이어 선택·정렬, 표현식 필터와 선택 범위, 탐색과 줌, 편집과 적용 순서로 표시합니다. 처음·이전·다음·마지막 이동, 표현식 필터, 선택 객체 범위 고정을 지원하며 Find와 Pick from map은 제거했습니다.
-    Alt+좌우/Home/End는 패널이 보이면 자동 활성화하며 FeatureNavEd가 켜져 있으면 충돌을 피하기 위해 중지합니다. 첫 객체에서 Previous를 누르면 마지막으로 이동합니다. 뒤로 화살표 또는 Alt+Backspace는 필터와 관계없이 직전 선택과 지도 화면을 복원합니다. Undo는 Alt+Z입니다. 툴바 아이콘 하나로 기능별 패널을 열며 프리셋 설정과 기본 표현식 작성기를 제공합니다. 마지막 레이어·적용 필터·정렬·순번·패널 위치를 기억합니다.
-    눈 아이콘으로 표시할 컬럼을 선택하고 패널 맨 아래에서 직접 편집합니다. Change 체크 없이 실제 수정한 컬럼만 추적합니다. 입력칸 오른쪽 Lock은 레이어별로 기억하며 이 플러그인의 폼·단축키·대기값 적용·Undo에서 잠긴 컬럼 변경을 차단합니다. 다른 QGIS 도구에는 적용되지 않습니다. 디스크 아이콘은 수정한 잠금 해제 컬럼을 편집 버퍼에 반영하며 실제 파일 저장은 QGIS에서 별도로 수행합니다. 미적용 입력은 이동 전 폐기 여부를 확인하고 원래 대상을 유지합니다.
+    전구 버튼으로 지정 레이어의 현재 선택 객체를 반짝이게 합니다. 선택이나 줌을 바꾸지 않습니다. 객체 이동과 직전 화면 복원 시에도 자동으로 반짝입니다. No zoom에서도 동작합니다. 설정에서 반짝임 단축키를 지정할 수 있습니다.
+    이동 패널에서 지정한 레이어가 반영 대상입니다. QGIS에서 다른 레이어를 활성화하거나 패널을 숨겨도 지정 레이어의 선택 객체에 적용합니다. 대상이 유효하지 않으면 다른 레이어로 넘어가지 않고 입력을 중단합니다. Undo 오른쪽 톱니바퀴에서 기능별 단축키를 지정·변경·해제하며 기본값 복원과 중복·충돌 검사를 지원하고 설정을 기억합니다.
+    객체 Undo(Alt+Z)는 마지막 선택 객체에 연속 입력한 플러그인 변경을 함께 복원하고 선택·화면 맞춤·반짝임으로 표시합니다. 다른 도구나 저장한 편집은 보호합니다. 충돌 값이 있으면 복원을 차단합니다. 이력은 현재 편집 세션의 최근 200묶음입니다. 필터는 명시적인 새로고침 때만 다시 평가하며 편집·Undo로 목록을 바꾸지 않습니다. 쓰레기통은 입력칸만 비우며 새로고침해야 적용됩니다.
+    레이어 선택·정렬, 표현식 필터와 선택 범위, 탐색과 줌, 편집과 적용 순서로 표시합니다. 처음·이전·다음·마지막 이동, 표현식 필터, 선택 객체 범위 고정을 지원합니다. Find와 Pick from map은 제거했습니다.
+    Alt+좌우/Home/End는 패널이 보이면 자동 활성화합니다. FeatureNavEd가 켜져 있으면 충돌을 피하기 위해 중지합니다. 첫 객체에서 Previous를 누르면 마지막으로 이동합니다. 뒤로 화살표 또는 Alt+Backspace는 필터와 관계없이 직전 선택과 지도 화면을 복원합니다. Undo는 Alt+Z입니다. 툴바 아이콘 하나로 기능별 패널을 열며 프리셋 설정과 기본 표현식 작성기를 제공합니다. 마지막 레이어·적용 필터·정렬·순번·패널 위치를 기억합니다.
+    눈 아이콘으로 표시할 컬럼을 선택하고 직접 편집합니다. Lock은 새 플러그인 입력을 막으며 다른 QGIS 도구에는 적용되지 않습니다. 디스크 아이콘은 미적용 입력과 대기 프리셋을 반영한 뒤 지정 레이어의 모든 미저장 편집을 파일에 저장합니다. 다른 도구의 편집도 함께 저장하며 저장 후 객체 Undo로 복원할 수 없습니다. 저장 후에도 편집 모드를 유지합니다. 실패하면 오류를 표시하고 버퍼를 롤백하지 않습니다. 미적용 입력은 원래 대상을 유지합니다.
     Apply presets immediately를 켜면 프리셋 단축키를 편집 버퍼에 즉시 적용합니다. 끄면 메모리에 대기시킨 후 플러그인 메뉴에서 적용·폐기합니다. 기본 Alt+1~9는 설정에서 바꿀 수 있습니다. 단축키 입력 시 대상 객체를 고정하며 실제 파일은 자동 저장하지 않습니다.
-    QGIS 4.2 이상, 4.x 계열을 지원합니다. Windows의 QGIS 4.2.2에서 독립 메모리 레이어 테스트를 수행했습니다. QGIS 3.x는 지원하지 않으며 Linux/macOS 실제 실행은 미검증입니다. 화면은 영어, 문서는 영어·한국어입니다.
-version=1.7.3
+    QGIS 4.2 이상, 4.x 계열을 지원합니다. Windows의 QGIS 4.2.2에서 독립 메모리 레이어 테스트를 수행했습니다. QGIS 3.x는 지원하지 않으며 Linux/macOS에서는 실제 실행을 검증하지 않았습니다. 화면은 영어, 문서는 영어·한국어입니다.
+version=1.7.6
 qgisMinimumVersion=4.2
 qgisMaximumVersion=4.99
 author=HaYanJongSeong
@@ -30,7 +32,10 @@ tracker=https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues
 license=GPL-3.0-or-later
 icon=icon.svg
 tags=attributes,editing,keyboard,shortcuts,selection
-changelog=1.7.3: Use scoped QGIS enums to satisfy the official Qt6 compatibility check without changing behavior.
+changelog=1.7.6: Update the README screenshots and GitHub/QGIS descriptions. No runtime changes from 1.7.5.
+    1.7.5: Add a bulb button and configurable shortcut to flash the designated layer's selection. Automatically flash when navigating and restoring the previous view, including No zoom mode.
+    1.7.4: Enable Save for unsaved target-layer edits. Apply drafts and pending presets, then explicitly commit ALL target-layer edits to the data source. Keep editing enabled, retain failed edits and clear saved feature Undo history.
+    1.7.3: Use scoped QGIS enums to satisfy the official Qt6 compatibility check without changing behavior.
     1.7.2: Add a clear-assignment button beside each shortcut setting. Assignments are removed only after Save; Cancel preserves existing keys.
     1.7.1: Move the feature-save icon immediately left of Undo, sharing one row with shortcut settings. Preserve modified-field tracking, locks and shortcut bindings.
     1.7.0: Remove Change checkboxes, add persistent column locks and a feature-save disk icon. Add per-action shortcut settings beside Undo, with live rebinding and conflict protection. Pin preset writes to the navigator's designated layer regardless of the active QGIS layer.
