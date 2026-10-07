@@ -50,9 +50,17 @@ def normalized(values):
         key = sequence.toString(QKeySequence.SequenceFormat.PortableText)
         if key:
             combination = sequence[0]
-            modifiers = combination.keyboardModifiers()
-            function_key = Qt.Key.Key_F1.value <= combination.key().value <= Qt.Key.Key_F35.value
-            if not function_key and not (modifiers & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier)):
+            if isinstance(combination, int):  # Qt5 combines key and modifier bits.
+                modifiers = combination
+                key_code = combination & ~int(Qt.KeyboardModifier.KeyboardModifierMask)
+            else:
+                modifiers = combination.keyboardModifiers()
+                key_code = int(combination.key())
+                modifiers = modifiers.value
+            function_key = int(Qt.Key.Key_F1) <= key_code <= int(Qt.Key.Key_F35)
+            safe_modifiers = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
+            safe_bits = int(safe_modifiers) if isinstance(combination, int) else safe_modifiers.value
+            if not function_key and not (modifiers & safe_bits):
                 raise ValueError('Use Ctrl/Alt/Meta or a function key to avoid triggering edits while typing.\n입력 중 오작동을 막으려면 Ctrl/Alt/Meta 조합 또는 기능키를 사용하세요.')
         if key and key in used:
             raise ValueError(f'Duplicate shortcut {key}: {ACTIONS[used[key]][0]} / {ACTIONS[name][0]}')

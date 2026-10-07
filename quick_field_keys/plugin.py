@@ -4,11 +4,11 @@ from pathlib import Path
 
 from qgis.core import QgsFields, QgsSettings, QgsVariantUtils, QgsVectorLayer
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QIcon, QKeySequence, QShortcut
+from qgis.PyQt.QtGui import QIcon, QKeySequence
 try:
-    from qgis.PyQt.QtGui import QAction
+    from qgis.PyQt.QtGui import QAction, QShortcut
 except ImportError:
-    from qgis.PyQt.QtWidgets import QAction
+    from qgis.PyQt.QtWidgets import QAction, QShortcut
 from qgis.PyQt.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QVBoxLayout,

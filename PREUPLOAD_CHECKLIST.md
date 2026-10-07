@@ -1,6 +1,6 @@
 # QGIS repository pre-upload checklist
 
-Release reviewed: **1.7.6**, on **2026-10-07**. This release changes documentation and metadata; runtime behavior is unchanged from tested version 1.7.5.
+Release reviewed: **1.7.7**, on **2026-10-07**. This release adds QGIS 3.44 LTR / Qt5 compatibility and retains QGIS 4 / Qt6 support.
 
 The authenticated add-version form for plugin **6547** was inspected in the existing
 browser session. All six checklist statements were reviewed. The 68 mandatory
@@ -12,7 +12,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 | Non-empty public source repository matching the ZIP, without compiled files | Verified locally by byte comparison; the repository is public. No ZIP or compiled files are committed. |
 | Meaningful description written in English | Verified: English comes first in `description` and `about`, followed by Korean. README and button tooltips are bilingual; source comments are English. |
 | Public, valid homepage, tracker and repository URLs | Public GitHub README, source repository and enabled issue tracker are configured. |
-| This version has been tested with QGIS and works as expected | Both regression scripts passed for the same runtime code in version 1.7.5, including explicit Save and automatic/manual flash. A separate isolated GeoPackage save/reopen check passed during 1.7.4 work. QGIS MCP is currently disconnected, so a fresh 1.7.6 runtime test has not been run. Physical keyboard input and Plugin Manager installation remain manual checks. |
+| This version has been tested with QGIS and works as expected | Both regression scripts and a temporary GeoPackage plugin Save/reopen check passed in standalone QGIS Python on Windows with QGIS 3.44.15 / Qt 5.15.13 / PyQt 5.15.11 and QGIS 4.2.2 / Qt 6.11 / PyQt 6.11. The temporary QGIS 3 runtime was extracted without installation; existing profiles and projects were not changed. Physical keyboard input and Plugin Manager installation remain manual checks. |
 | Consent to email contact and ongoing maintenance correspondence | The maintainer supplied `kjs4075@live.com`, previously submitted this plugin and authorized the latest upload. The portal reports Email confirmed. Mailbox delivery has not been tested. |
 
 ## Additional publishing requirements
@@ -20,8 +20,8 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 - GPL-3.0-or-later metadata and full GPL v3 license text are included.
 - The package is below the 25 MB limit and contains no binaries or external dependencies.
 - Navigation design attribution and the original FeatureNavEd MIT license are included.
-- Compatibility and restrictions are documented: QGIS 4.2+ in the 4.x series;
-  Windows/QGIS 4.2.2 tested; Linux and macOS unverified; QGIS 3.x unsupported.
+- Compatibility and restrictions are documented: QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series;
+  Windows/QGIS 3.44.15 and 4.2.2 tested; Linux and macOS unverified; earlier QGIS 3 releases unsupported.
 - Runtime code does not make network requests or require credentials.
 - The official server's scan and manual approval status must be verified after submission; submission is not approval.
 - English code comments and a self-contained memory test are provided.
@@ -30,7 +30,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 
 ## Manual test before submission
 
-1. Install `quick_field_keys_1.7.6.zip` using **Install from ZIP** and restart QGIS.
+1. Install `quick_field_keys_1.7.7.zip` using **Install from ZIP** and restart QGIS.
 2. Use a disposable layer, not production data. Configure all nine presets.
 3. Select two features out of three. Try each Alt+1 through Alt+9 shortcut.
 4. Confirm only selected features change and QGIS does not save automatically.
@@ -44,7 +44,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 12. Confirm the disk button saves all target-layer edits, including external edits, and leaves editing enabled. Saved changes must not be restored by feature Undo.
 13. Test the bulb button and automatic flashes, including No zoom mode and empty selections.
 
-## Runtime checks completed for 1.7.5
+## Runtime checks completed for 1.7.7 on both QGIS versions
 
 - Selected-feature preset writes, type/NULL conversion and failed-operation rollback.
 - Navigator order, wrap-around, previous-view history, CRS zoom and manual-only filter evaluation.
@@ -55,7 +55,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 - Explicit Save activation for immediate, staged, form and external edits; commit failure retention and saved Undo boundaries.
 - Manual multi-selection flash and automatic navigation flash, including No zoom; empty selection and shortcut remapping.
 
-## Packaging checks for 1.7.6
+## Packaging checks for 1.7.7
 
 - Check ZIP CRC, metadata, source-file equality and absence of compiled files before uploading.
 - Check the README screenshots and identify test fields/bindings as examples.

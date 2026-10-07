@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.7
+
+- Support QGIS 3.44 LTR / Qt5 alongside QGIS 4 / Qt6; older QGIS 3 releases are not supported.
+- Handle the Qt5 location of QShortcut and the different key-sequence and enum representations.
+- Preserve dock layout settings across both Qt versions.
+- Run both regression scripts on Windows with QGIS 3.44.15 / Qt 5.15.13 and QGIS 4.2.2 / Qt 6.11. Verify actual Save by reopening a temporary GeoPackage on both runtimes.
+
 ## 1.7.6
 
 - Add example panel and shortcut-settings screenshots to the README.

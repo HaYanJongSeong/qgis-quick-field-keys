@@ -765,6 +765,45 @@ feature_nav.shutdown()
 feature_nav.deleteLater()
 plugin.dock_widget = None
 project.clear()
+if globals().get('test_persistent_save', False):
+    import tempfile
+    from qgis.core import QgsVectorFileWriter
+    with tempfile.TemporaryDirectory(prefix='qfk_save_', ignore_cleanup_errors=True) as directory:
+        source = QgsVectorLayer('Point?crs=EPSG:4326&field=status:string', 'Save source', 'memory')
+        feature = QgsFeature(source.fields())
+        feature.setAttributes(['before'])
+        feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(1, 1)))
+        assert source.dataProvider().addFeatures([feature])[0]
+        filename = str(Path(directory) / 'save.gpkg')
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = 'GPKG'
+        options.layerName = 'save_test'
+        result = QgsVectorFileWriter.writeAsVectorFormatV3(source, filename, project.transformContext(), options)
+        assert result[0] == QgsVectorFileWriter.NoError, result
+        saved = QgsVectorLayer(filename + '|layername=save_test', 'Disk save test', 'ogr')
+        assert saved.isValid()
+        project.addMapLayer(saved)
+        saved_id = next(saved.getFeatures()).id()
+        saved.selectByIds([saved_id])
+        disk_plugin = core.QuickFieldKeys(IsolatedIface(saved))
+        disk_plugin.immediate = True
+        disk_plugin.presets = {'1': {'field': 'status', 'value': 'persisted', 'null': False}}
+        disk_nav = navigation.QuickFieldNavigator(disk_plugin, project)
+        disk_plugin.dock_widget = disk_nav
+        disk_plugin.apply('1')
+        assert saved.isModified()
+        assert disk_nav.save_current_fields()
+        assert saved.isEditable() and not saved.isModified()
+        reopened = QgsVectorLayer(filename + '|layername=save_test', 'Reopened', 'ogr')
+        assert reopened.isValid() and next(reopened.getFeatures())['status'] == 'persisted'
+        disk_nav.shutdown()
+        disk_nav.deleteLater()
+        disk_plugin.dock_widget = None
+        saved.rollBack()
+        project.clear()
+        del reopened, saved, disk_nav, disk_plugin
+        QApplication.processEvents()
+    print('PASS: temporary GeoPackage plugin Save persists after reopening with a new provider')
 print('PASS: requested panel order, no Find/Pick controls, direct column chooser, one-icon integration, native expression builder, automatic navigation, Previous wrap, filter-independent view history, chosen-field multi-edit, captured targets, Undo, remembered state, schema change, removed-target recovery, no automatic file save')
 print('PASS: grouped feature Undo, repeated fields, filter-independent selection/focus/flash, No zoom override, foreign-field preservation, conflict blocking, external-Undo invalidation, atomic failure/retry, commit boundary')
 print('PASS: filter membership frozen during edits, draft expressions and sorting; clear is draft-only; explicit refresh applies the filter')

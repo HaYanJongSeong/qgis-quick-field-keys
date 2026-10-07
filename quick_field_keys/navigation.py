@@ -16,7 +16,11 @@ from qgis.core import (
 )
 from qgis.gui import QgsExpressionLineEdit, QgsMapLayerComboBox
 from qgis.PyQt.QtCore import QByteArray, Qt
-from qgis.PyQt.QtGui import QIcon, QKeySequence, QShortcut
+from qgis.PyQt.QtGui import QIcon, QKeySequence
+try:
+    from qgis.PyQt.QtGui import QShortcut
+except ImportError:
+    from qgis.PyQt.QtWidgets import QShortcut
 from qgis.PyQt.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox,
     QHBoxLayout, QLabel, QPushButton, QScrollArea, QStyle, QToolButton, QVBoxLayout, QWidget,
@@ -867,10 +871,11 @@ class QuickFieldNavigator(QDockWidget):
             self.restore_on_open()
 
     def preferred_dock_area(self):
-        value = self._layout_state.get('area', Qt.DockWidgetArea.RightDockWidgetArea.value)
+        right = Qt.DockWidgetArea.RightDockWidgetArea
+        value = self._layout_state.get('area', getattr(right, 'value', right))
         allowed = (Qt.DockWidgetArea.LeftDockWidgetArea, Qt.DockWidgetArea.RightDockWidgetArea,
                    Qt.DockWidgetArea.TopDockWidgetArea, Qt.DockWidgetArea.BottomDockWidgetArea)
-        return next((area for area in allowed if area.value == value), Qt.DockWidgetArea.RightDockWidgetArea)
+        return next((area for area in allowed if getattr(area, 'value', area) == value), right)
 
     def restore_layout(self):
         previous = self._restoring
@@ -888,8 +893,10 @@ class QuickFieldNavigator(QDockWidget):
         if not self._ready or self._restoring or not self._layout_restored:
             return
         area = self.iface.mainWindow().dockWidgetArea(self)
+        if area == Qt.DockWidgetArea.NoDockWidgetArea:
+            area = self.preferred_dock_area()
         state = {
-            'area': area.value if area != Qt.DockWidgetArea.NoDockWidgetArea else self.preferred_dock_area().value,
+            'area': getattr(area, 'value', area),
             'floating': self.isFloating(),
             'geometry': bytes(self.saveGeometry().toBase64()).decode('ascii'),
         }

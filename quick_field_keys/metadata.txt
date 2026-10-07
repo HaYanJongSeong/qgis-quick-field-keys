@@ -10,7 +10,7 @@ about=English
     Alt+Left/Right/Home/End shortcuts are enabled automatically while the panel is visible, unless FeatureNavEd is loaded. Previous wraps from the first feature to the last. The back-arrow button or Alt+Backspace restores the previous selection and map view independently of the filter. Undo uses Alt+Z. One toolbar icon opens the grouped panel, including preset configuration and the native expression builder. Last layer, applied filter, sort order, position and panel geometry are remembered.
     Click the eye icon to choose columns and edit directly. Locks block this plugin's new writes; other QGIS tools are unaffected. The disk icon applies drafts and pending presets, then explicitly saves all unsaved edits in the designated layer, including other tools' edits. Saved edits cannot be restored by feature Undo. Save keeps editing enabled and reports errors without rolling back the buffer. Drafts retain their original targets.
     With Apply presets immediately on, presets apply to the edit buffer. With it off, values are staged in memory; use Apply pending shortcuts in the plugin menu to apply them. Default preset keys are Alt+1-9 but are customizable. Staged targets are captured when the shortcut is pressed and do not change with later selections. No operation automatically saves the data file.
-    QGIS 4.2+ in the 4.x series. Tested with isolated memory layers on Windows, QGIS 4.2.2. QGIS 3.x is unsupported; Linux/macOS execution has not been verified. The interface is in English, with English/Korean documentation. No external packages or network access are required for core features. GPL-3.0-or-later. The navigation design draws on FeatureNavEd by Irene Jaya, released under the MIT license.
+    Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Tested on Windows with QGIS 3.44.15 / Qt 5.15.13 and QGIS 4.2.2 / Qt 6.11, using isolated memory layers and a temporary GeoPackage save/reopen check. Earlier QGIS 3 releases are unsupported; Linux/macOS execution has not been verified. The interface is in English, with English/Korean documentation. No external packages or network access are required for core features. GPL-3.0-or-later. The navigation design draws on FeatureNavEd by Irene Jaya, released under the MIT license.
 
     한국어
     전구 버튼으로 지정 레이어의 현재 선택 객체를 반짝이게 합니다. 선택이나 줌을 바꾸지 않습니다. 객체 이동과 직전 화면 복원 시에도 자동으로 반짝입니다. No zoom에서도 동작합니다. 설정에서 반짝임 단축키를 지정할 수 있습니다.
@@ -20,9 +20,9 @@ about=English
     Alt+좌우/Home/End는 패널이 보이면 자동 활성화합니다. FeatureNavEd가 켜져 있으면 충돌을 피하기 위해 중지합니다. 첫 객체에서 Previous를 누르면 마지막으로 이동합니다. 뒤로 화살표 또는 Alt+Backspace는 필터와 관계없이 직전 선택과 지도 화면을 복원합니다. Undo는 Alt+Z입니다. 툴바 아이콘 하나로 기능별 패널을 열며 프리셋 설정과 기본 표현식 작성기를 제공합니다. 마지막 레이어·적용 필터·정렬·순번·패널 위치를 기억합니다.
     눈 아이콘으로 표시할 컬럼을 선택하고 직접 편집합니다. Lock은 새 플러그인 입력을 막으며 다른 QGIS 도구에는 적용되지 않습니다. 디스크 아이콘은 미적용 입력과 대기 프리셋을 반영한 뒤 지정 레이어의 모든 미저장 편집을 파일에 저장합니다. 다른 도구의 편집도 함께 저장하며 저장 후 객체 Undo로 복원할 수 없습니다. 저장 후에도 편집 모드를 유지합니다. 실패하면 오류를 표시하고 버퍼를 롤백하지 않습니다. 미적용 입력은 원래 대상을 유지합니다.
     Apply presets immediately를 켜면 프리셋 단축키를 편집 버퍼에 즉시 적용합니다. 끄면 메모리에 대기시킨 후 플러그인 메뉴에서 적용·폐기합니다. 기본 Alt+1~9는 설정에서 바꿀 수 있습니다. 단축키 입력 시 대상 객체를 고정하며 실제 파일은 자동 저장하지 않습니다.
-    QGIS 4.2 이상, 4.x 계열을 지원합니다. Windows의 QGIS 4.2.2에서 독립 메모리 레이어 테스트를 수행했습니다. QGIS 3.x는 지원하지 않으며 Linux/macOS에서는 실제 실행을 검증하지 않았습니다. 화면은 영어, 문서는 영어·한국어입니다.
-version=1.7.6
-qgisMinimumVersion=4.2
+    QGIS 3.44 LTR과 QGIS 4.2 이상, 4.x 계열을 지원합니다. Windows의 QGIS 3.44.15 / Qt 5.15.13과 QGIS 4.2.2 / Qt 6.11에서 독립 메모리 레이어 테스트와 임시 GeoPackage 저장·재열기 검사를 통과했습니다. 3.44보다 오래된 QGIS 3 버전은 지원하지 않습니다. Linux/macOS에서는 실제 실행을 검증하지 않았습니다. 화면은 영어, 문서는 영어·한국어입니다.
+version=1.7.7
+qgisMinimumVersion=3.44
 qgisMaximumVersion=4.99
 author=HaYanJongSeong
 email=kjs4075@live.com
@@ -32,7 +32,8 @@ tracker=https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues
 license=GPL-3.0-or-later
 icon=icon.svg
 tags=attributes,editing,keyboard,shortcuts,selection
-changelog=1.7.6: Update the README screenshots and GitHub/QGIS descriptions. No runtime changes from 1.7.5.
+changelog=1.7.7: Support QGIS 3.44 LTR / Qt5 alongside QGIS 4 / Qt6. Fix shortcut imports, key validation and dock layout persistence. Both regression scripts and temporary GeoPackage Save/reopen checks pass on QGIS 3.44.15 and 4.2.2.
+    1.7.6: Update the README screenshots and GitHub/QGIS descriptions. No runtime changes from 1.7.5.
     1.7.5: Add a bulb button and configurable shortcut to flash the designated layer's selection. Automatically flash when navigating and restoring the previous view, including No zoom mode.
     1.7.4: Enable Save for unsaved target-layer edits. Apply drafts and pending presets, then explicitly commit ALL target-layer edits to the data source. Keep editing enabled, retain failed edits and clear saved feature Undo history.
     1.7.3: Use scoped QGIS enums to satisfy the official Qt6 compatibility check without changing behavior.

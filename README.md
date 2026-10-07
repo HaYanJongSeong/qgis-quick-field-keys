@@ -23,8 +23,9 @@ Undo 오른쪽 톱니바퀴로 엽니다. 각 입력칸 옆의 X는 해당 키 �
 
 ## 설치
 
-QGIS 4.2 이상, 4.x에서 사용합니다. Windows의 QGIS 4.2.2 / Qt 6.11에서 테스트했습니다.
-QGIS 3.x는 지원하지 않으며 Linux와 macOS에서는 아직 확인하지 않았습니다.
+QGIS 3.44 LTR과 QGIS 4.2 이상, 4.x에서 사용합니다.
+Windows의 QGIS 3.44.15 / Qt 5.15.13과 QGIS 4.2.2 / Qt 6.11에서 테스트했습니다.
+3.44보다 오래된 QGIS 3 버전은 지원하지 않습니다. Linux와 macOS에서는 아직 확인하지 않았습니다.
 별도 Python 패키지나 계정은 필요하지 않습니다.
 
 1. [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest)에서 `quick_field_keys_버전.zip`을 받습니다. 자동 생성된 Source code ZIP은 설치 파일이 아닙니다.
@@ -107,7 +108,7 @@ Choose the target layer in the panel, configure field/value presets, select feat
 The screenshots above show version 1.7.5 with test fields and example shortcut assignments, not the default bindings.
 
 Download the installation ZIP from [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) and use Plugins > Manage and Install Plugins > Install from ZIP. Restart QGIS after updating.
-Requires QGIS 4.2+ in the 4.x series. Tested on Windows with QGIS 4.2.2 and Qt 6.11; QGIS 3.x is unsupported and Linux/macOS are untested. No extra packages or accounts are needed.
+Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Tested on Windows with QGIS 3.44.15 / Qt 5.15.13 and QGIS 4.2.2 / Qt 6.11. Earlier QGIS 3 releases are unsupported; Linux/macOS are untested. No extra packages or accounts are needed.
 
 - Default keys: Alt+1–9 for presets, Alt+Left/Right/Home/End for navigation, Alt+Backspace for the previous view, Alt+Z for feature Undo. The gear dialog changes or clears bindings; Save applies them.
 - Changes apply to the panel's designated layer, even when another layer is active or the panel is hidden. No selection means no changes.
@@ -131,6 +132,7 @@ for name in ('test_qgis.py', 'test_navigation.py'):
 ```
 
 The tests use an isolated project and canvas with memory layers. They do not edit the current project or its files.
+For a standalone run, use the chosen QGIS installation's Python environment to run `tests/run_qgis.py`. It also checks Save by reopening a temporary GeoPackage. The test profile and data are separate from your QGIS profile and project.
 They cover presets, navigation, filters, locks, shortcut settings, Save and Undo. Physical keyboard input and installation through Plugin Manager are separate manual checks.
 
 ```sh
