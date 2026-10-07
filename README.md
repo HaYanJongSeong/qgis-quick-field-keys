@@ -16,7 +16,7 @@ navigation, chosen-field single/multi-edit forms and optional staged application
 
 ## Installation
 
-1. Obtain `quick_field_keys_1.7.2.zip`. Published releases are available from
+1. Obtain `quick_field_keys_1.7.3.zip`. Published releases are available from
    [GitHub Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases).
    GitHub's automatically generated **Source code** ZIP is not the installation package.
 2. In QGIS, open **Plugins > Manage and Install Plugins > Install from ZIP**.
@@ -171,7 +171,7 @@ Linux와 macOS 실제 실행은 아직 검증하지 않았습니다.
 
 ### 설치와 기본 입력
 
-1. 배포된 `quick_field_keys_1.7.2.zip`을 받습니다.
+1. 배포된 `quick_field_keys_1.7.3.zip`을 받습니다.
 2. QGIS의 **플러그인 관리 및 설치 > ZIP 파일에서 설치**로 설치하고 QGIS를 재시작합니다.
 3. 이동 패널에서 반영할 레이어를 지정하고 **Field value presets...**에서
    Alt+1~Alt+9의 필드와 값을 지정합니다. 기존 설정은 유지됩니다.

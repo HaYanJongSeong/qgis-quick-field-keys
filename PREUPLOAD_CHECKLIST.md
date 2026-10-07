@@ -1,6 +1,6 @@
 # QGIS repository pre-upload checklist
 
-Release reviewed: **1.7.2**, on **2026-10-07**.
+Release reviewed: **1.7.3**, on **2026-10-07**.
 
 The authenticated add-version form for plugin **6547** was inspected in the existing
 browser session. All six checklist statements were reviewed. The 68 mandatory
@@ -30,7 +30,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 
 ## Manual test before submission
 
-1. Install `quick_field_keys_1.7.2.zip` using **Install from ZIP** and restart QGIS.
+1. Install `quick_field_keys_1.7.3.zip` using **Install from ZIP** and restart QGIS.
 2. Use a disposable layer, not production data. Configure all nine presets.
 3. Select two features out of three. Try each Alt+1 through Alt+9 shortcut.
 4. Confirm only selected features change and QGIS does not save automatically.
@@ -42,7 +42,7 @@ security rules and all 61 skippable rules remain enabled; no security rule is by
 10. Test the shortcut-settings gear, remapping and persistence. Disable FeatureNavEd for overlapping navigation keys.
 11. Activate another QGIS layer and confirm preset writes still affect only the navigator's designated target.
 
-## Automated checks completed for 1.7.2
+## Automated checks completed for 1.7.3
 
 - Selected-feature preset writes, type/NULL conversion and failed-operation rollback.
 - Navigator order, wrap-around, previous-view history, CRS zoom and manual-only filter evaluation.

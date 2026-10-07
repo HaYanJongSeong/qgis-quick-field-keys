@@ -19,7 +19,7 @@ about=English
     눈 아이콘으로 표시할 컬럼을 선택하고 패널 맨 아래에서 직접 편집합니다. Change 체크 없이 실제 수정한 컬럼만 추적합니다. 입력칸 오른쪽 Lock은 레이어별로 기억하며 이 플러그인의 폼·단축키·대기값 적용·Undo에서 잠긴 컬럼 변경을 차단합니다. 다른 QGIS 도구에는 적용되지 않습니다. 디스크 아이콘은 수정한 잠금 해제 컬럼을 편집 버퍼에 반영하며 실제 파일 저장은 QGIS에서 별도로 수행합니다. 미적용 입력은 이동 전 폐기 여부를 확인하고 원래 대상을 유지합니다.
     Apply presets immediately를 켜면 프리셋 단축키를 편집 버퍼에 즉시 적용합니다. 끄면 메모리에 대기시킨 후 플러그인 메뉴에서 적용·폐기합니다. 기본 Alt+1~9는 설정에서 바꿀 수 있습니다. 단축키 입력 시 대상 객체를 고정하며 실제 파일은 자동 저장하지 않습니다.
     QGIS 4.2 이상, 4.x 계열을 지원합니다. Windows의 QGIS 4.2.2에서 독립 메모리 레이어 테스트를 수행했습니다. QGIS 3.x는 지원하지 않으며 Linux/macOS 실제 실행은 미검증입니다. 화면은 영어, 문서는 영어·한국어입니다.
-version=1.7.2
+version=1.7.3
 qgisMinimumVersion=4.2
 qgisMaximumVersion=4.99
 author=HaYanJongSeong
@@ -30,7 +30,8 @@ tracker=https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues
 license=GPL-3.0-or-later
 icon=icon.svg
 tags=attributes,editing,keyboard,shortcuts,selection
-changelog=1.7.2: Add a clear-assignment button beside each shortcut setting. Assignments are removed only after Save; Cancel preserves existing keys.
+changelog=1.7.3: Use scoped QGIS enums to satisfy the official Qt6 compatibility check without changing behavior.
+    1.7.2: Add a clear-assignment button beside each shortcut setting. Assignments are removed only after Save; Cancel preserves existing keys.
     1.7.1: Move the feature-save icon immediately left of Undo, sharing one row with shortcut settings. Preserve modified-field tracking, locks and shortcut bindings.
     1.7.0: Remove Change checkboxes, add persistent column locks and a feature-save disk icon. Add per-action shortcut settings beside Undo, with live rebinding and conflict protection. Pin preset writes to the navigator's designated layer regardless of the active QGIS layer.
     1.6.0: Add feature-group Undo with selection, map focus and flash. Restore all consecutive plugin edits to the last feature group while protecting other tools and saved edits. Re-evaluate filter membership only with explicit refresh; clearing the input, editing and Undo no longer rebuild the filter list.

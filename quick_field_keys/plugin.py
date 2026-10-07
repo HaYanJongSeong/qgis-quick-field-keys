@@ -37,8 +37,8 @@ def writable_indices(layer):
     fields = layer.fields()
     primary = set(layer.dataProvider().pkAttributeIndexes())
     return [i for i in range(len(fields))
-            if fields.fieldOrigin(i) in (QgsFields.OriginProvider, QgsFields.OriginEdit)
-            and not (fields.fieldOrigin(i) == QgsFields.OriginProvider
+            if fields.fieldOrigin(i) in (QgsFields.FieldOrigin.OriginProvider, QgsFields.FieldOrigin.OriginEdit)
+            and not (fields.fieldOrigin(i) == QgsFields.FieldOrigin.OriginProvider
                       and fields.fieldOriginIndex(i) in primary)]
 
 

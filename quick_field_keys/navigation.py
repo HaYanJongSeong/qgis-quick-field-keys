@@ -60,7 +60,7 @@ class QuickFieldNavigator(QDockWidget):
         layout.addWidget(layer_group)
         self.layer_combo = QgsMapLayerComboBox()
         self.layer_combo.setProject(self.project)
-        self.layer_combo.setFilters(QgsMapLayerProxyModel.VectorLayer)
+        self.layer_combo.setFilters(QgsMapLayerProxyModel.Filter.VectorLayer)
         self.layer_combo.setAllowEmptyLayer(True)
         self.layer_combo.setToolTip('Target layer — Navigation and preset writes use this layer even when another QGIS layer is active or this panel is hidden.\n반영 대상 레이어 — 탐색과 프리셋 입력은 여기서 지정한 레이어에 반영합니다. 다른 레이어를 활성화하거나 패널을 숨겨도 대상은 유지됩니다.')
         layer_layout.addWidget(self.layer_combo)

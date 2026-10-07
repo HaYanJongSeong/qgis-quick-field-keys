@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.3
+
+- Replace legacy field-origin and vector-layer filter enum aliases with explicit scoped enums required by the official Qt6 compatibility checker. Runtime behavior is unchanged.
+- Re-run both isolated QGIS regression scripts before publishing.
+
 ## 1.7.2
 
 - Add a clear-assignment button next to each shortcut input, with English/Korean help.
