@@ -1,0 +1,20 @@
+[general]
+name=Quick Field Keys
+description=Set attribute values on selected features using configurable Alt+1 to Alt+9 shortcuts, with undo and no automatic save.
+about=Assign a field and a typed value or NULL to each of nine shortcuts. Only selected features in the active vector layer are changed. Changes remain in the QGIS edit buffer and can be undone. Presets are shared across layers with matching field names. Korean interface; tested on QGIS 4.2.2 on Windows. No external dependencies or network access.
+version=1.2.0
+qgisMinimumVersion=4.2
+qgisMaximumVersion=4.99
+author=HaYanJongSeong
+email=55427278+HaYanJongSeong@users.noreply.github.com
+homepage=https://github.com/HaYanJongSeong/qgis-quick-field-keys#readme
+repository=https://github.com/HaYanJongSeong/qgis-quick-field-keys
+tracker=https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues
+license=GPL-3.0-or-later
+icon=icon.svg
+tags=attributes,editing,keyboard,shortcuts,selection
+changelog=1.2.0: Prepare public distribution, limit support to QGIS 4.2+, add icon and GPL license, and avoid changing other fields through update defaults.
+    1.1.0: Add Alt+3 through Alt+9 and a compact settings dialog.
+    1.0.0: Initial Alt+1 and Alt+2 implementation.
+category=Vector
+experimental=False
