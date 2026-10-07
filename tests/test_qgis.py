@@ -1,14 +1,36 @@
 """Run in QGIS Python. Only a temporary memory layer is modified."""
 import importlib.util
+from importlib import import_module
+import sys
 from pathlib import Path
 from qgis.core import QgsDefaultValue, QgsFeature, QgsField, QgsVectorLayer, QgsVariantUtils
 from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtWidgets import QMainWindow
 
-path = Path(__file__).resolve().parents[1] / 'quick_field_keys' / 'plugin.py'
-spec = importlib.util.spec_from_file_location('quick_field_keys_test', path)
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+path = Path(__file__).resolve().parents[1] / 'quick_field_keys'
+package_name = '_quick_field_keys_core_test'
+for loaded in list(sys.modules):
+    if loaded == package_name or loaded.startswith(package_name + '.'):
+        del sys.modules[loaded]
+spec = importlib.util.spec_from_file_location(package_name, path / '__init__.py', submodule_search_locations=[str(path)])
+package = importlib.util.module_from_spec(spec)
+sys.modules[package_name] = package
+spec.loader.exec_module(package)
+module = import_module(package_name + '.plugin')
+
+
+class MemorySettings:
+    data = {}
+
+    def value(self, key, default=None, type=None):
+        value = self.data.get(key, default)
+        return type(value) if type is not None else value
+
+    def setValue(self, key, value):
+        self.data[key] = value
+
+
+module.QgsSettings = MemorySettings
 
 
 class TestBar:
@@ -28,6 +50,7 @@ class TestIface:
         self.bar = TestBar()
         self.window = QMainWindow()
         self.shortcuts = {}
+        self.toolbar_actions = []
 
     def mainWindow(self):
         return self.window
@@ -45,10 +68,11 @@ class TestIface:
         pass
 
     def addToolBarIcon(self, *args):
-        pass
+        self.toolbar_actions.append(args[0])
 
     def removeToolBarIcon(self, *args):
-        pass
+        if args[0] in self.toolbar_actions:
+            self.toolbar_actions.remove(args[0])
 
     def activeLayer(self):
         return self.layer
@@ -78,6 +102,8 @@ plugin.presets = {'1': {'field': 'status', 'value': 'done', 'null': False},
 plugin.initGui()
 assert set(fake.shortcuts) == {f'Alt+{n}' for n in range(1, 10)}
 assert plugin.navigation_action.isCheckable()
+assert fake.toolbar_actions == [plugin.navigation_action]
+assert not any(action.text() == 'Configure fields and values...' for action in plugin.actions)
 assert plugin.dock_widget is None
 assert any(action.text() == 'Discard pending shortcuts' for action in plugin.actions)
 
@@ -155,6 +181,48 @@ try:
     plugin.configure()
 finally:
     module.QDialog = original_dialog
+from qgis.PyQt.QtGui import QKeySequence
+bindings = dict(plugin.shortcut_map)
+bindings['preset_1'] = 'F13'
+bindings['preset_2'] = ''
+plugin.set_shortcuts(bindings)
+assert 'Alt+1' not in fake.shortcuts and 'Alt+2' not in fake.shortcuts
+assert fake.shortcuts['F13'] is plugin.preset_actions['1']
+assert module.QuickFieldKeys(fake).shortcut_key('preset_1') == 'F13'
+invalid = dict(bindings, preset_2='F13')
+try:
+    plugin.set_shortcuts(invalid)
+    raise AssertionError('Duplicate keys must be rejected')
+except ValueError:
+    pass
+assert plugin.shortcut_map == bindings
+external = module.QAction('External QGIS action', fake.window)
+external.setShortcut(QKeySequence('F14'))
+try:
+    plugin.set_shortcuts(dict(bindings, preset_1='F14'))
+    raise AssertionError('External QGIS key conflicts must be rejected')
+except ValueError:
+    pass
+assert external.shortcut().toString() == 'F14'
+assert plugin.shortcut_map == bindings
+original_register = fake.registerMainWindowAction
+
+
+def fail_registration(action, shortcut):
+    return False if shortcut == 'F15' else original_register(action, shortcut)
+
+
+fake.registerMainWindowAction = fail_registration
+try:
+    plugin.set_shortcuts(dict(bindings, preset_1='F15'))
+    raise AssertionError('Registration failure must roll back live keys and leave stored settings unchanged')
+except ValueError:
+    pass
+finally:
+    fake.registerMainWindowAction = original_register
+assert plugin.shortcut_map == bindings and fake.shortcuts['F13'] is plugin.preset_actions['1']
+assert module.QuickFieldKeys(fake).shortcut_key('preset_1') == 'F13'
 plugin.unload()
 assert not fake.shortcuts
+assert not fake.toolbar_actions
 print('PASS: Alt+1-9, settings dialog, preset preservation, selected features only, no update defaults, no-selection safety, type validation, NULL, undo, failure rollback, no automatic save')
