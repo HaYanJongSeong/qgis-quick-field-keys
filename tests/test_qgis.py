@@ -72,10 +72,14 @@ layer.setDefaultValueDefinition(1, QgsDefaultValue('99', True))
 ids = [f.id() for f in layer.getFeatures()]
 fake = TestIface(layer)
 plugin = module.QuickFieldKeys(fake)
+plugin.immediate = True
 plugin.presets = {'1': {'field': 'status', 'value': 'done', 'null': False},
                   '2': {'field': 'number', 'value': '12', 'null': False}}
 plugin.initGui()
 assert set(fake.shortcuts) == {f'Alt+{n}' for n in range(1, 10)}
+assert plugin.navigation_action.isCheckable()
+assert plugin.dock_widget is None
+assert any(action.text() == 'Discard pending shortcuts' for action in plugin.actions)
 
 plugin.apply('1')
 assert not layer.isEditable()

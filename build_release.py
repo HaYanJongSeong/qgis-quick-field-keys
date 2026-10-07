@@ -22,9 +22,9 @@ def build(output):
             raise ValueError(f'Invalid public URL: {key}')
     assert general['license'] == 'GPL-3.0-or-later'
     files = {f'quick_field_keys/{name}': package / name
-             for name in ('__init__.py', 'plugin.py', 'metadata.txt', 'icon.svg')}
+             for name in ('__init__.py', 'plugin.py', 'navigation.py', 'field_editor.py', 'metadata.txt', 'icon.svg')}
     files.update({f'quick_field_keys/{name}': root / name
-                  for name in ('README.md', 'LICENSE', 'CHANGELOG.md')})
+                  for name in ('README.md', 'LICENSE', 'LICENSE.FeatureNavEd', 'CHANGELOG.md')})
     for archive_name, source in files.items():
         if not source.is_file():
             raise FileNotFoundError(source)
