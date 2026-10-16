@@ -24,7 +24,7 @@ Undo 오른쪽 톱니바퀴로 엽니다. 각 입력칸 옆의 X는 해당 키 �
 ## 설치
 
 QGIS 3.44 LTR과 QGIS 4.2 이상, 4.x에서 사용합니다.
-Windows의 QGIS 3.44.15 / Qt 5.15.13과 QGIS 4.2.2 / Qt 6.11에서 테스트했습니다.
+1.7.8은 Windows의 QGIS 4.2.2 / Qt 6.11에서 회귀 테스트와 임시 GeoPackage 저장·재열기를 확인했습니다. QGIS 3.44 LTR 지원은 유지하지만 이번 버전에서는 재시험하지 않았습니다. QGIS 3.44.15 / Qt 5.15.13 검증은 1.7.7 기준입니다.
 3.44보다 오래된 QGIS 3 버전은 지원하지 않습니다. Linux와 macOS에서는 아직 확인하지 않았습니다.
 별도 Python 패키지나 계정은 필요하지 않습니다.
 
@@ -70,7 +70,7 @@ QGIS 레이어 목록에서 다른 레이어를 눌러도 입력 대상은 패�
 다른 QGIS 도구의 편집을 잠그거나, 이미 편집 버퍼에 있는 값의 파일 저장을 막지는 않습니다.
 잠금과 표시 필드는 레이어별로 기억합니다.
 
-미적용 입력이 있으면 이동 전에 폐기 여부를 묻습니다. 외부에서 선택을 바꿔도 미적용 입력의 대상은 바뀌지 않습니다.
+직접 입력한 값은 객체 이동 전에 원래 선택 대상의 편집 버퍼에 자동 반영합니다. 폐기 확인창이나 파일 자동 저장은 없습니다. 값이 유효하지 않거나 Lock·쓰기 실패로 반영하지 못하면 입력을 유지하고 이동을 막습니다. 외부 선택·필터 변경은 미적용 입력의 대상을 바꾸지 않습니다.
 대기 프리셋도 입력 당시의 선택 객체에 묶입니다. 한 번에 한 레이어만 대기시킬 수 있습니다.
 대기값은 재시작 후 남지 않습니다. 플러그인 메뉴의 Discard pending shortcuts로 버릴 수 있습니다.
 
@@ -108,13 +108,14 @@ Choose the target layer in the panel, configure field/value presets, select feat
 The screenshots above show version 1.7.5 with test fields and example shortcut assignments, not the default bindings.
 
 Download the installation ZIP from [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) and use Plugins > Manage and Install Plugins > Install from ZIP. Restart QGIS after updating.
-Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Tested on Windows with QGIS 3.44.15 / Qt 5.15.13 and QGIS 4.2.2 / Qt 6.11. Earlier QGIS 3 releases are unsupported; Linux/macOS are untested. No extra packages or accounts are needed.
+Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Version 1.7.8 passed regression scripts and a temporary GeoPackage save/reopen check on Windows with QGIS 4.2.2 / Qt 6.11. QGIS 3.44 LTR support is retained but was not retested for 1.7.8; QGIS 3.44.15 / Qt 5.15.13 testing applies to 1.7.7. Earlier QGIS 3 releases are unsupported; Linux/macOS are untested. No extra packages or accounts are needed.
 
 - Default keys: Alt+1–9 for presets, Alt+Left/Right/Home/End for navigation, Alt+Backspace for the previous view, Alt+Z for feature Undo. The gear dialog changes or clears bindings; Save applies them.
 - Changes apply to the panel's designated layer, even when another layer is active or the panel is hidden. No selection means no changes.
 - Navigation flashes the destination. The bulb flashes the current selection without changing the view. Both work in No zoom mode.
 - Refresh explicitly applies the filter. Trash clears its input only. Editing and Undo do not re-evaluate filter membership.
 - Use the eye icon to choose inline fields. Locks block this plugin's new writes, not other tools or persistence of existing edits. Drafts and staged presets keep their original targets.
+- Navigation applies direct inputs to their captured selection in the edit buffer without a discard prompt or file save. Invalid values, locks or write failures retain the input and block navigation; external selection and filter changes do not retarget drafts.
 - **The disk button commits all unsaved edits in the designated layer, including other tools' edits. It applies drafts and pending presets first. Saved changes cannot be restored by feature Undo.** Preset entry does not save automatically.
 - Feature Undo groups consecutive plugin changes to the last selection and protects external edits. History is limited to 200 groups in the current session. Save, rollback, external Undo, layer removal and restart invalidate it.
 - Use Set NULL for NULL. Primary keys, joined fields and expression fields are excluded. Invalid values or provider constraints may prevent changes or saving; check the reported result.

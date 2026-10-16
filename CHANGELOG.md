@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.8
+
+- 값을 입력한 뒤 Alt+Right 등으로 객체를 이동하면 폐기 확인창 없이 원래 선택 대상의 편집 버퍼에 반영합니다. 여러 객체를 편집한 뒤 디스크 Save 버튼으로 한 번에 저장할 수 있습니다. 이동 중에는 파일을 저장하지 않습니다.
+- 잘못된 값, Lock 또는 쓰기 실패로 반영하지 못하면 입력을 유지하고 이동을 막습니다. 외부 선택·필터 변경으로 입력 대상이 바뀌지 않습니다.
+- Save는 다른 도구의 편집을 포함해 지정 레이어의 모든 미저장 편집을 저장합니다. 저장한 변경은 객체 Undo로 복원할 수 없습니다.
+- Windows의 QGIS 4.2.2 / Qt 6.11에서 회귀 스크립트 2개와 임시 GeoPackage 저장·재열기를 확인했습니다. QGIS 3.44 LTR 지원은 유지하지만 1.7.8에서는 재시험하지 않았습니다.
+
+- Apply direct field inputs to their captured selection in the edit buffer before navigation, instead of asking to discard them. Never commit during navigation; the disk Save button still saves all edits in the designated layer.
+- Keep inputs and block movement when validation, locks or writes fail. External selection and filter changes cannot retarget drafts.
+- Verified shortcut navigation, failure retention, captured multi-feature targets and temporary GeoPackage navigation/Save/reopening on Windows with QGIS 4.2.2 / Qt 6.11. QGIS 3.44 LTR support is retained but was not retested for 1.7.8. Saved edits cannot be restored by feature Undo.
+
 ## 1.7.7
 
 - Support QGIS 3.44 LTR / Qt5 alongside QGIS 4 / Qt6; older QGIS 3 releases are not supported.

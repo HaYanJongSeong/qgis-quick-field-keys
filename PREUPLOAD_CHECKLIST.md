@@ -1,5 +1,18 @@
 # QGIS repository pre-upload checklist
 
+## 1.7.8 review (2026-10-16)
+
+- Update the existing plugin **6547**, not a new plugin listing.
+- The caller directly verified both regression scripts and the temporary GeoPackage navigation/Save/reopen check on Windows with QGIS 4.2.2 / Qt 6.11 before publication. The standalone test runner hangs during teardown; its wrapper exits with `os._exit(0)` only after test return. This is not a clean teardown pass.
+- QGIS 3.44 LTR support is retained. No QGIS 3 runtime is currently available, so 1.7.8 was not retested on QGIS 3.44. All QGIS 3 test claims below refer to 1.7.7.
+- Navigation applies captured drafts to the edit buffer without committing. Validation, lock and write failures retain input and block movement. Save remains layer-wide, including other tools' edits; saved edits cannot be restored by feature Undo.
+- Rebuild the installation ZIP in a new temporary output directory after documentation changes. Preserve the existing Downloads ZIP. Check CRC, required metadata, source-byte equality and absence of compiled files before publication.
+- GitHub publication and public ZIP/README verification are tracked separately from QGIS submission.
+- QGIS submission is currently blocked: the prior CDP publishing helpers are absent from `C:/Users/admin/AppData/Local/Temp/opencode`, and port 9223 is unavailable. No 1.7.8 server security scan, Qt6 scan or approval has been verified. Do not reuse the 1.7.7 portal results below as current evidence.
+- Korean notes received limited manual style editing and meaning comparison using humanize-korean rules. Its runtime agent tools are unavailable; the formal pipeline and quantitative gates were not run.
+
+## Historical 1.7.7 review
+
 Release reviewed: **1.7.7**, on **2026-10-07**. This release adds QGIS 3.44 LTR / Qt5 compatibility and retains QGIS 4 / Qt6 support.
 
 The authenticated add-version form for plugin **6547** was inspected in the existing

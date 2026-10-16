@@ -1,7 +1,7 @@
 """SPDX-License-Identifier: GPL-3.0-or-later
 
 Edit only explicitly chosen fields for a fixed selection of features.
-The layer form configuration is never changed. Edits require an explicit Apply.
+The layer form configuration is never changed. Navigation applies drafts to the edit buffer.
 """
 import json
 from pathlib import Path
@@ -286,11 +286,13 @@ class FieldEditor(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes
 
-    def apply_form(self, checked=False):
+    def apply_form(self, checked=False) -> bool:
         changes = self.form_changes()
-        if self.plugin.apply_changes(self.layer, changes, 'Apply chosen fields'):
-            self.load_rows()
-            self.refresh_status()
+        if not self.plugin.apply_changes(self.layer, changes, 'Apply chosen fields'):
+            return False
+        self.load_rows()
+        self.refresh_status()
+        return True
 
     def form_changes(self):
         return {(fid, name): wrapper.value()

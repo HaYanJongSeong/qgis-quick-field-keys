@@ -556,9 +556,7 @@ class QuickFieldNavigator(QDockWidget):
     def allow_field_navigation(self):
         editor = self.inline_editor
         if editor is not None and editor.has_form_edits():
-            if not editor.confirm_discard_form():
-                return False
-            editor.load_rows()
+            return editor.apply_form()
         return True
 
     def save_current_fields(self, *args):

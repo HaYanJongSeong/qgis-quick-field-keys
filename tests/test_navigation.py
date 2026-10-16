@@ -207,13 +207,63 @@ assert inline.rows['status'][0].widget().isEnabled()
 inline.rows['status'][0].setValue('unsaved inline value')
 assert inline.has_form_edits()
 original_confirm = inline.confirm_discard_form
-inline.confirm_discard_form = lambda: False
-nav.step(1)
-assert nav.index == 0 and inline.has_form_edits(), 'Cancelled navigation must preserve inline input'
-assert layer.getFeature(ids[1])['status'] == 'original'
-inline.confirm_discard_form = lambda: True
-nav.step(1)
+discard_calls = []
+commit_calls = []
+original_navigation_commit = layer.commitChanges
+inline.confirm_discard_form = lambda: discard_calls.append(True) or False
+layer.commitChanges = lambda stopEditing=True: commit_calls.append(stopEditing) or False
+nav.shortcuts[1].activated.emit()
 assert nav.index == 1 and not inline.has_form_edits()
+assert layer.getFeature(ids[1])['status'] == 'unsaved inline value'
+assert layer.getFeature(ids[3])['status'] == 'original', 'Next feature must not receive the previous draft'
+assert inline.ids == [ids[3]]
+assert not discard_calls and not commit_calls, 'Alt+Right must apply to the buffer without discard or file commit'
+assert all(feature['status'] == 'original' for feature in layer.dataProvider().getFeatures())
+assert plugin.undo_edit(layer)
+
+# Failed writes, locks and invalid values keep the draft and block movement.
+inline.rows['status'][0].setValue('retry navigation')
+original_navigation_change = layer.changeAttributeValue
+layer.changeAttributeValue = lambda *args, **kwargs: False
+blocked_selection = list(layer.selectedFeatureIds())
+blocked_index = nav.index
+blocked_history = len(nav.view_history)
+nav.shortcuts[1].activated.emit()
+layer.changeAttributeValue = original_navigation_change
+assert layer.selectedFeatureIds() == blocked_selection and nav.index == blocked_index
+assert len(nav.view_history) == blocked_history
+assert inline.has_form_edits() and inline.rows['status'][0].value() == 'retry navigation'
+assert layer.getFeature(ids[1])['status'] == 'original'
+MemorySettings.data[f'quick_field_keys/locked_fields/{layer.id()}'] = '["status"]'
+nav.step(1)
+assert layer.selectedFeatureIds() == blocked_selection and nav.index == blocked_index
+assert inline.has_form_edits() and inline.rows['status'][0].value() == 'retry navigation'
+MemorySettings.data[f'quick_field_keys/locked_fields/{layer.id()}'] = '[]'
+inline.rows['rank'][0].setValue(17)
+original_rank_value = inline.rows['rank'][0].value
+inline.rows['rank'][0].value = lambda: 'invalid integer'
+nav.step(1)
+inline.rows['rank'][0].value = original_rank_value
+assert layer.selectedFeatureIds() == blocked_selection and nav.index == blocked_index
+assert inline.has_form_edits() and inline.rows['status'][0].value() == 'retry navigation'
+assert layer.getFeature(ids[1])['status'] == 'original' and layer.getFeature(ids[1])['rank'] == 1
+inline.rows['rank'][0].setValue(1)
+nav.step(1)
+assert not inline.has_form_edits() and layer.getFeature(ids[1])['status'] == 'retry navigation'
+assert plugin.undo_edit(layer)
+
+# External selection and filter refresh never retarget the captured multi-feature draft.
+layer.selectByIds(ids[:2])
+inline.rows['status'][0].setValue('captured navigation')
+layer.selectByIds([ids[2]])
+nav.filter_refresh.click()
+assert set(inline.ids) == set(ids[:2]) and inline.has_form_edits()
+nav.shortcuts[1].activated.emit()
+assert [layer.getFeature(fid)['status'] for fid in ids] == ['captured navigation'] * 2 + ['original'] * 2
+assert inline.ids == layer.selectedFeatureIds() and not inline.has_form_edits()
+assert not discard_calls and not commit_calls
+assert plugin.undo_edit(layer)
+layer.commitChanges = original_navigation_commit
 inline.confirm_discard_form = original_confirm
 nav.go_to(0)
 assert not any('zoom failed' in str(message) for message in fake.messages.rows)
@@ -769,11 +819,14 @@ if globals().get('test_persistent_save', False):
     import tempfile
     from qgis.core import QgsVectorFileWriter
     with tempfile.TemporaryDirectory(prefix='qfk_save_', ignore_cleanup_errors=True) as directory:
-        source = QgsVectorLayer('Point?crs=EPSG:4326&field=status:string', 'Save source', 'memory')
-        feature = QgsFeature(source.fields())
-        feature.setAttributes(['before'])
-        feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(1, 1)))
-        assert source.dataProvider().addFeatures([feature])[0]
+        source = QgsVectorLayer('Point?crs=EPSG:4326&field=status:string&field=rank:integer', 'Save source', 'memory')
+        disk_features = []
+        for rank in (1, 2):
+            feature = QgsFeature(source.fields())
+            feature.setAttributes(['before', rank])
+            feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(rank, rank)))
+            disk_features.append(feature)
+        assert source.dataProvider().addFeatures(disk_features)[0]
         filename = str(Path(directory) / 'save.gpkg')
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = 'GPKG'
@@ -783,27 +836,48 @@ if globals().get('test_persistent_save', False):
         saved = QgsVectorLayer(filename + '|layername=save_test', 'Disk save test', 'ogr')
         assert saved.isValid()
         project.addMapLayer(saved)
-        saved_id = next(saved.getFeatures()).id()
-        saved.selectByIds([saved_id])
+        saved_ids = [feature.id() for feature in saved.getFeatures()]
+        saved.selectByIds([saved_ids[0]])
         disk_plugin = core.QuickFieldKeys(IsolatedIface(saved))
-        disk_plugin.immediate = True
-        disk_plugin.presets = {'1': {'field': 'status', 'value': 'persisted', 'null': False}}
         disk_nav = navigation.QuickFieldNavigator(disk_plugin, project)
         disk_plugin.dock_widget = disk_nav
-        disk_plugin.apply('1')
+        disk_nav.go_to(0)
+        disk_commit_calls = []
+        disk_original_commit = saved.commitChanges
+        saved.commitChanges = lambda stopEditing=True: disk_commit_calls.append(stopEditing) or False
+        disk_nav.inline_editor.rows['status'][0].setValue('first persisted')
+        disk_nav.shortcuts[1].activated.emit()
+        assert saved.selectedFeatureIds() == [saved_ids[1]]
+        assert saved.getFeature(saved_ids[0])['status'] == 'first persisted'
+        disk_nav.inline_editor.rows['status'][0].setValue('second persisted')
+        disk_nav.shortcuts[1].activated.emit()
+        assert saved.selectedFeatureIds() == [saved_ids[0]]
+        assert [saved.getFeature(fid)['status'] for fid in saved_ids] == ['first persisted', 'second persisted']
+        assert not disk_commit_calls, 'Navigation must never call commitChanges'
+        saved.commitChanges = disk_original_commit
+        assert saved.changeAttributeValue(saved_ids[0], saved.fields().indexFromName('rank'), 77)
+        before_save = QgsVectorLayer(filename + '|layername=save_test', 'Before disk Save', 'ogr')
+        assert before_save.isValid()
+        assert [feature['status'] for feature in before_save.getFeatures()] == ['before', 'before']
+        assert [feature['rank'] for feature in before_save.getFeatures()] == [1, 2]
         assert saved.isModified()
+        assert disk_nav.save_button.isEnabled()
         assert disk_nav.save_current_fields()
         assert saved.isEditable() and not saved.isModified()
         reopened = QgsVectorLayer(filename + '|layername=save_test', 'Reopened', 'ogr')
-        assert reopened.isValid() and next(reopened.getFeatures())['status'] == 'persisted'
+        assert reopened.isValid()
+        assert [feature['status'] for feature in reopened.getFeatures()] == ['first persisted', 'second persisted']
+        assert [feature['rank'] for feature in reopened.getFeatures()] == [77, 2]
+        assert not disk_plugin.applied_history and not disk_plugin.undo_edit(saved)
         disk_nav.shutdown()
         disk_nav.deleteLater()
         disk_plugin.dock_widget = None
         saved.rollBack()
         project.clear()
-        del reopened, saved, disk_nav, disk_plugin
+        del before_save, reopened, saved, disk_nav, disk_plugin
         QApplication.processEvents()
-    print('PASS: temporary GeoPackage plugin Save persists after reopening with a new provider')
+    print('PASS: temporary GeoPackage Alt+Right preserves separate drafts without commit; fresh provider unchanged before Save; layer-wide Save persists drafts and external edits after reopening')
+print('PASS: draft navigation without discard/commit, failure/lock/invalid input retention, captured multi-feature targets after external selection/filter changes')
 print('PASS: requested panel order, no Find/Pick controls, direct column chooser, one-icon integration, native expression builder, automatic navigation, Previous wrap, filter-independent view history, chosen-field multi-edit, captured targets, Undo, remembered state, schema change, removed-target recovery, no automatic file save')
 print('PASS: grouped feature Undo, repeated fields, filter-independent selection/focus/flash, No zoom override, foreign-field preservation, conflict blocking, external-Undo invalidation, atomic failure/retry, commit boundary')
 print('PASS: filter membership frozen during edits, draft expressions and sorting; clear is draft-only; explicit refresh applies the filter')
