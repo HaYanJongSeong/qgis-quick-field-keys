@@ -108,6 +108,119 @@ assert set(nav.inline_editor.rows) == {'status', 'rank'}
 assert not any(checkbox.text().startswith('Change ') for checkbox in nav.findChildren(navigation.QCheckBox))
 assert not nav.inline_editor.save_button.icon().isNull()
 assert isinstance(nav.filter_expression, QgsExpressionLineEdit)
+from qgis.core import QgsLayerTreeModel, QgsMapThemeCollection
+from qgis.gui import QgsLayerTreeView
+theme_model = QgsLayerTreeModel(project.layerTreeRoot())
+theme_view = QgsLayerTreeView()
+theme_view.setModel(theme_model)
+fake.layerTreeView = lambda: theme_view
+themes = project.mapThemeCollection()
+tree = project.layerTreeRoot()
+before_selection = layer.selectedFeatureIds()
+before_values = [f.attributes() for f in layer.getFeatures()]
+nav.map_themes.step(1)
+assert fake.messages.rows[-1][0] == 'warning'
+from qgis.PyQt.QtGui import QColor
+layer.renderer().symbol().setColor(QColor('blue'))
+assert layer.styleManager().addStyleFromLayer('style-A')
+layer.renderer().symbol().setColor(QColor('red'))
+assert layer.styleManager().addStyleFromLayer('style-B')
+assert layer.styleManager().setCurrentStyle('style-A')
+other.setOpacity(0.35)
+assert other.styleManager().addStyleFromLayer('other-A')
+other.setOpacity(0.8)
+assert other.styleManager().addStyleFromLayer('other-B')
+assert other.styleManager().setCurrentStyle('other-A')
+tree.findLayer(other.id()).setItemVisibilityChecked(False)
+themes.insert('A', QgsMapThemeCollection.createThemeFromCurrentState(tree, theme_model))
+assert layer.styleManager().setCurrentStyle('style-B')
+assert other.styleManager().setCurrentStyle('other-B')
+tree.findLayer(other.id()).setItemVisibilityChecked(True)
+themes.insert('B', QgsMapThemeCollection.createThemeFromCurrentState(tree, theme_model))
+themes.applyTheme('A', tree, theme_model)
+assert other.styleManager().setCurrentStyle('other-A')
+original_themes = {n: themes.mapThemeState(n) for n in themes.mapThemes()}
+
+def assert_background_follows_theme():
+    if nav.map_themes.current_name in ('B', 'C'):
+        assert tree.findLayer(other.id()).isVisible(), 'Background must become visible with theme B'
+        assert other.styleManager().currentStyle() == 'other-B', 'Visible background style must follow the theme'
+        assert abs(other.opacity() - 0.8) < 1e-9
+    else:
+        assert not tree.findLayer(other.id()).isVisible(), 'Background must be hidden with theme A'
+
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtTest import QTest
+fake.window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, nav)
+fake.window.show()
+nav.show()
+fake.window.activateWindow()
+fake.canvas.setFocus()
+QApplication.processEvents()
+QTest.keyClick(fake.canvas, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+QApplication.processEvents()
+assert nav.map_themes.current_name == 'B', 'Actual Alt+Down must activate the theme shortcut'
+assert layer.styleManager().currentStyle() == 'style-B'
+assert layer.renderer().symbol().color() == QColor('red')
+assert_background_follows_theme()
+QTest.keyClick(fake.canvas, Qt.Key.Key_Up, Qt.KeyboardModifier.AltModifier)
+QApplication.processEvents()
+assert nav.map_themes.current_name == 'A', 'Actual Alt+Up must activate the theme shortcut'
+assert layer.styleManager().currentStyle() == 'style-A'
+assert layer.renderer().symbol().color() == QColor('blue')
+assert_background_follows_theme()
+nav.hide()
+QTest.keyClick(fake.canvas, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+QApplication.processEvents()
+assert nav.map_themes.current_name == 'A', 'Hidden panel must disable theme shortcuts'
+fake.window.hide()
+print('PASS: actual Qt Alt+Down/Alt+Up key events; hidden panel disables shortcuts', flush=True)
+fake.layer = other
+theme_keys = {s.objectName(): s for s in nav.shortcuts}
+theme_keys['theme_next'].activated.emit()
+assert layer.styleManager().currentStyle() == 'style-B'
+assert_background_follows_theme()
+assert nav.map_themes.current_name == 'B'
+theme_keys['theme_next'].activated.emit()
+assert layer.styleManager().currentStyle() == 'style-A', 'Next must wrap to the first theme'
+assert_background_follows_theme()
+theme_keys['theme_previous'].activated.emit()
+assert layer.styleManager().currentStyle() == 'style-B', 'Previous must wrap to the last theme'
+assert_background_follows_theme()
+assert {n: themes.mapThemeState(n) for n in themes.mapThemes()} == original_themes, 'Applying a layer theme must not rewrite saved themes'
+assert nav.layer is layer and fake.activeLayer() is other
+assert layer.selectedFeatureIds() == before_selection
+assert [f.attributes() for f in layer.getFeatures()] == before_values
+themes.renameMapTheme('B', 'C')
+nav.map_themes.step(-1)
+assert nav.map_themes.current_name == 'A', 'Renamed themes must be read live'
+themes.removeMapTheme('C')
+nav.map_themes.step(1)
+assert nav.map_themes.current_name == 'A', 'A single theme must remain selectable'
+assert layer.styleManager().setCurrentStyle('style-B')
+themes.update('A', QgsMapThemeCollection.createThemeFromCurrentState(tree, theme_model))
+assert layer.styleManager().setCurrentStyle('style-A')
+nav.map_themes.step(1)
+assert layer.styleManager().currentStyle() == 'style-B', 'Replaced target style must be read live'
+assert_background_follows_theme()
+tree.findLayer(layer.id()).setItemVisibilityChecked(False)
+themes.update('A', QgsMapThemeCollection.createThemeFromCurrentState(tree, theme_model))
+tree.findLayer(layer.id()).setItemVisibilityChecked(True)
+nav.map_themes.step(1)
+assert not tree.findLayer(layer.id()).itemVisibilityChecked(), 'A theme without the target must hide only the target'
+assert_background_follows_theme()
+tree.findLayer(layer.id()).setItemVisibilityChecked(True)
+themes.clear()
+nav.map_themes.step(-1)
+assert fake.messages.rows[-1][0] == 'warning'
+saved_target = nav.layer
+nav.layer = None
+nav.map_themes.step(1)
+assert fake.messages.rows[-1][0] == 'warning'
+nav.layer = saved_target
+fake.layer = layer
+print('PASS: map theme actions, both wrap directions, live rename/replace/remove, target and data preservation', flush=True)
+print('PASS: whole-theme background visibility/style/opacity; designated target and attributes retained', flush=True)
 panel_layout = nav.widget().widget().layout()
 assert not nav.findChildren(QGroupBox), 'The compact panel must have no section title rows'
 assert [panel_layout.itemAt(i).widget().objectName() for i in range(panel_layout.count())

@@ -18,6 +18,8 @@ ACTIONS.update({
     'previous': ('Previous / 이전', 'Alt+Left'),
     'next': ('Next / 다음', 'Alt+Right'),
     'last': ('Last / 끝', 'Alt+End'),
+    'theme_previous': ('Previous map theme / 이전 지도 테마', 'Alt+Up'),
+    'theme_next': ('Next map theme / 다음 지도 테마', 'Alt+Down'),
     'back': ('Previous view / 직전 화면', 'Alt+Backspace'),
     'flash': ('Flash selected features / 선택 객체 반짝임', ''),
     'undo': ('Feature Undo / 객체 실행 취소', 'Alt+Z'),

@@ -84,7 +84,6 @@ class QuickFieldNavigator(QDockWidget):
         navigate_layout = QVBoxLayout(navigate_group)
         navigate_layout.setContentsMargins(0, 0, 0, 0)
         navigate_layout.setSpacing(4)
-        # Insert after the filter section below.
         self.position = QLabel('No features')
         self.position.setWordWrap(True)
         row = QHBoxLayout()
@@ -242,10 +241,14 @@ class QuickFieldNavigator(QDockWidget):
         layout.addLayout(self.fields_layout)
         layout.addStretch(1)
         self.shortcuts = []
+        from .map_themes import MapThemeSwitcher
+        self.map_themes = MapThemeSwitcher(self)
         for name, callback in (
             ('previous', lambda: self.step(-1)), ('next', lambda: self.step(1)),
             ('first', lambda: self.go_to(0)), ('last', lambda: self.go_to(len(self.ids) - 1)),
             ('lock_field', self.toggle_focused_lock),
+            ('theme_previous', lambda: self.map_themes.step(-1)),
+            ('theme_next', lambda: self.map_themes.step(1)),
             ('zoom', lambda: self.zoom_mode.setCurrentIndex((self.zoom_mode.currentIndex() + 1) % self.zoom_mode.count())),
             ('layer', self.layer_combo.showPopup), ('sort', self.sort_field.showPopup),
         ):
