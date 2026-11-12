@@ -140,11 +140,12 @@ class FieldEditor(QDialog):
         if self.layer is None:
             return
         features = [self.layer.getFeature(fid) for fid in self.ids]
+        allowed = set(writable_indices(self.layer))
+        registry = QgsGui.editorWidgetRegistry()
         for name in self.visible_names:
             index = self.layer.fields().indexFromName(name)
-            if index not in writable_indices(self.layer):
+            if index not in allowed:
                 continue
-            registry = QgsGui.editorWidgetRegistry()
             if self.layer.editorWidgetSetup(index).type() == 'Hidden':
                 wrapper = registry.create('TextEdit', self.layer, index, {}, None, self.form_widget)
             else:
@@ -172,6 +173,35 @@ class FieldEditor(QDialog):
             self.form.addRow(name + ('' if same else ' (mixed / empty)'), row)
             self.rows[name] = (wrapper, lock)
             self.refresh_field_lock(name)
+
+    def refresh_applied_values(self, layer, changes):
+        if self.layer is not layer or not self.ids:
+            return
+        captured = set(self.ids)
+        names = {name for fid, name in changes if fid in captured and name in self.rows}
+        # Only a write covering every captured target can supersede a field draft.
+        names = {name for name in names if name not in self.changed_fields
+                 or all((fid, name) in changes for fid in captured)}
+        if not names:
+            return
+        features = [layer.getFeature(fid) for fid in self.ids]
+        for row, (name, (wrapper, lock)) in enumerate(self.rows.items()):
+            if name not in names:
+                continue
+            values = [feature[name] for feature in features if feature.isValid()]
+            same = bool(values) and all(self.equal(value, values[0]) for value in values)
+            value = values[0] if same else None
+            blocked = wrapper.blockSignals(True)
+            try:
+                wrapper.setValue(value)
+            finally:
+                wrapper.blockSignals(blocked)
+            self.initial_values[name] = (same, value)
+            self.changed_fields.discard(name)
+            label = self.form.itemAt(row, QFormLayout.ItemRole.LabelRole).widget()
+            label.setText(name + ('' if same else ' (mixed / empty)'))
+        if hasattr(self, 'save_button'):
+            self.refresh_save_state()
 
     def field_changed(self, name):
         if name not in self.rows or name in locked_names(self.layer):

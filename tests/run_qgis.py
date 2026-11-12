@@ -13,9 +13,9 @@ with tempfile.TemporaryDirectory(prefix='qfk_test_profile_', ignore_cleanup_erro
     from qgis.gui import QgsGui
     QgsGui.editorWidgetRegistry().initEditors()
     print(f'Runtime: QGIS {Qgis.QGIS_VERSION}; Qt {QT_VERSION_STR}; PyQt {PYQT_VERSION_STR}', flush=True)
-    for name in ('test_qgis.py', 'test_navigation.py'):
+    for name in ('test_qgis.py', 'test_navigation.py', 'test_optimization.py'):
         test = Path(__file__).with_name(name)
         namespace = {'__file__': str(test), 'test_persistent_save': True}
         exec(compile(test.read_text(encoding='utf-8'), str(test), 'exec'), namespace)
         app.processEvents()
-    print('PASS: both isolated QGIS regression scripts', flush=True)
+    print('PASS: all isolated QGIS regression scripts', flush=True)

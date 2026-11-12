@@ -223,7 +223,14 @@ class QuickFieldKeys:
         QgsSettings().setValue('quick_field_keys/immediate', self.immediate)
         self.refresh_edit_windows()
 
-    def refresh_edit_windows(self):
+    def refresh_edit_windows(self, layer=None, changes=None):
+        editors = [self.field_editor]
+        if self.dock_widget is not None:
+            editors.append(self.dock_widget.inline_editor)
+        if changes:
+            for editor in editors:
+                if editor is not None:
+                    editor.refresh_applied_values(layer, changes)
         if self.field_editor is not None:
             self.field_editor.refresh_status()
         if self.dock_widget is not None:
@@ -326,7 +333,7 @@ class QuickFieldKeys:
         previous = self.applied_history[-1] if self.applied_history else None
         merge = previous is not None and previous['layer'] is layer and previous['targets'] == targets
         if merge:
-            merge = all(self.same_value(before.get(key, layer.getFeature(key[0])[key[1]]), expected)
+            merge = all(self.same_value(before[key] if key in before else layer.getFeature(key[0])[key[1]], expected)
                         for key, expected in previous['after'].items())
         if merge:
             for key, value in before.items():
@@ -401,13 +408,13 @@ class QuickFieldKeys:
         finally:
             self._writing = False
         layer.endEditCommand()
+        after = {(fid, layer.fields()[index].name()): value for fid, index, value in converted}
         if record_history:
-            after = {(fid, layer.fields()[index].name()): value for fid, index, value in converted}
             self.remember_feature_edit(layer, before, after)
         layer.triggerRepaint()
         self.iface.messageBar().pushSuccess(
             MENU, f'{layer.name()}: updated {len({fid for fid, _, _ in converted})} features. Changes are unsaved and can be undone.')
-        self.refresh_edit_windows()
+        self.refresh_edit_windows(layer, after)
         return True
 
     def warn(self, message):
