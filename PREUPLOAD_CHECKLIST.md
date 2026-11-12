@@ -1,6 +1,18 @@
 # QGIS repository pre-upload checklist
 
-## 1.7.8 review (2026-10-16)
+## 1.7.9 release checks (2026-11-12)
+
+- Update existing plugin **6547**, `quick_field_keys`; do not create a new listing.
+- Include whole-map-theme cycling, applied-preset form synchronization, the two verified lookup optimizations and `map_themes.py` in the installation ZIP. Retain designated-layer writes, locks, captured drafts, feature Undo and manual layer-wide Save.
+- The tested runtime source passed all three regression scripts, nine focused tests, actual Qt Alt+Up/Down and Alt+1 key events, and temporary GeoPackage save/reopen checks on Windows with QGIS 4.2.3 / Qt 6.11 / PyQt 6.11. Final release gates must run against the 1.7.9 candidate and compare the packaged modules with that tested source.
+- The wrapper exits with `os._exit(0)` only after test return. Normal teardown is not verified. QGIS 3.44 LTR support is retained but not retested for 1.7.9. Linux/macOS execution, physical-keyboard use and Plugin Manager installation are not verified in this release.
+- Korean 1.7.9 notes completed the actual humanize-korean light path, modality/comma restoration checks and structural gate. Gate exit 0; character change rate 0.2%, five commas removed, self-check 6/6. Numbers, conditions, warnings and headings are unchanged. No manual substitute was used. The conservative result is grade B; deeper `--strict` review is optional, not silently performed.
+- Build a fresh `quick_field_keys_1.7.9.zip`; preserve existing release archives. Check CRC, a single top-level package, metadata version/range, all six Python modules, source-byte equality, licenses, size and absence of compiled files or backups. Keep generated ZIPs out of Git.
+- Publish the matching source, `v1.7.9` tag and exact ZIP on GitHub before submitting that ZIP to QGIS. Recheck public source/download equality and version absence immediately before submission.
+- Use the existing authenticated add-version page. Review all portal checklist statements and leave every security rule enabled. Verify receipt, security results, Qt6 results and administrator approval separately; submission does not imply approval.
+- Do not restart the user's QGIS, replace live editing methods, save or discard their project edits during publication. Disk changes take effect on the next user-controlled launch.
+
+## Historical 1.7.8 review (2026-10-16)
 
 - Update the existing plugin **6547**, not a new plugin listing.
 - The caller directly verified both regression scripts and the temporary GeoPackage navigation/Save/reopen check on Windows with QGIS 4.2.2 / Qt 6.11 before publication. The standalone test runner hangs during teardown; its wrapper exits with `os._exit(0)` only after test return. This is not a clean teardown pass.
@@ -8,8 +20,8 @@
 - Navigation applies captured drafts to the edit buffer without committing. Validation, lock and write failures retain input and block movement. Save remains layer-wide, including other tools' edits; saved edits cannot be restored by feature Undo.
 - Rebuild the installation ZIP in a new temporary output directory after documentation changes. Preserve the existing Downloads ZIP. Check CRC, required metadata, source-byte equality and absence of compiled files before publication.
 - GitHub publication and public ZIP/README verification are tracked separately from QGIS submission.
-- QGIS submission is currently blocked: the prior CDP publishing helpers are absent from `C:/Users/admin/AppData/Local/Temp/opencode`, and port 9223 is unavailable. No 1.7.8 server security scan, Qt6 scan or approval has been verified. Do not reuse the 1.7.7 portal results below as current evidence.
-- Korean notes received limited manual style editing and meaning comparison using humanize-korean rules. Its runtime agent tools are unavailable; the formal pipeline and quantitative gates were not run.
+- The initial publishing attempt recorded a browser-helper/port blocker. This is historical, not a current submission block: the public 1.7.8 version page was rechecked on 2026-11-12 and reports Approved: yes. This approval is not evidence for 1.7.9 or a fresh security/Qt6 scan.
+- The 1.7.8 Korean notes received limited manual style editing and meaning comparison using humanize-korean rules. The formal pipeline and quantitative gates were not run for that version. The 1.7.9 formal run above supersedes this method for current release notes.
 
 ## Historical 1.7.7 review
 

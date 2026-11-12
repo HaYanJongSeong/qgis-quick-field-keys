@@ -21,16 +21,27 @@
 Undo 오른쪽 톱니바퀴로 엽니다. 각 입력칸 옆의 X는 해당 키 지정을 비웁니다. 저장을 눌러야 적용됩니다. 취소하면 기존 설정을 유지합니다.
 화면의 `Ctrl+Alt+N`과 해제된 프리셋 9는 테스트용 설정입니다. 기본 단축키는 아래 안내를 참고하세요.
 
+## 1.7.9 변경 내역
+
+Alt+Up / Down으로 레이어 패널에 저장한 지도 테마를 앞뒤로 전환합니다. 처음과 끝에서는 순환합니다. UI 테마가 아니라 배경을 포함한 레이어 표시·스타일 묶음 전체를 적용합니다. 속성 입력 대상은 패널에서 지정한 레이어로 유지하며 테마 전환은 파일을 저장하지 않습니다. 패널이 보일 때 동작하고 톱니바퀴 설정에서 단축키를 바꾸거나 해제할 수 있습니다.
+
+Alt+1~9로 값을 넣었는데 패널에 이전 값이 남던 문제를 고쳤습니다. 다른 컬럼에 미적용 입력이 있어도 실제로 적용한 컬럼은 바로 갱신합니다. 다른 컬럼의 초안과 원래 입력 대상은 유지합니다. 같은 컬럼의 초안은 캡처한 모든 객체에 프리셋이 적용된 경우에만 새 값으로 대체하므로 나중에 이동할 때 오래된 입력으로 다시 덮어쓰지 않습니다. 다른 객체나 일부 객체에만 적용한 경우에는 기존 초안을 임의로 버리지 않습니다. 대기 프리셋은 실제로 적용하기 전까지 입력값처럼 표시하지 않으며 잠금이나 쓰기 실패가 있으면 입력을 유지합니다.
+
+연속 편집의 Undo 이력을 묶을 때 이미 가진 값을 다시 조회하던 처리를 없앴습니다. 폼을 만들 때 반복하던 쓰기 가능 필드와 위젯 레지스트리 조회도 한 번으로 줄였습니다. 설치 ZIP에서 지도 테마 모듈이 빠지던 문제를 고쳤습니다.
+
 ## 설치
 
 QGIS 3.44 LTR과 QGIS 4.2 이상, 4.x에서 사용합니다.
-1.7.8은 Windows의 QGIS 4.2.2 / Qt 6.11에서 회귀 테스트와 임시 GeoPackage 저장·재열기를 확인했습니다. QGIS 3.44 LTR 지원은 유지하지만 이번 버전에서는 재시험하지 않았습니다. QGIS 3.44.15 / Qt 5.15.13 검증은 1.7.7 기준입니다.
+Windows의 QGIS 4.2.3 / Qt 6.11에서 회귀 스크립트 3개와 집중 검사 9개를 실행했습니다. 실제 Qt 키 이벤트로 Alt+Up / Down 테마 전환과 Alt+1 직후의 패널 갱신을 확인했고 임시 GeoPackage의 저장·재열기도 검사했습니다. 테스트 반환 후에는 별도 래퍼로 프로세스를 종료했으며 정상 teardown 완료를 확인한 것은 아닙니다.
+QGIS 3.44 LTR 지원은 유지하지만 1.7.9에서는 재시험하지 않았습니다. QGIS 3.44.15 / Qt 5.15.13 검증은 1.7.7 기준입니다. Linux/macOS 실행과 Plugin Manager를 통한 설치는 이번에 확인하지 않았습니다.
 3.44보다 오래된 QGIS 3 버전은 지원하지 않습니다. Linux와 macOS에서는 아직 확인하지 않았습니다.
 별도 Python 패키지나 계정은 필요하지 않습니다.
 
 1. [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest)에서 `quick_field_keys_버전.zip`을 받습니다. 자동 생성된 Source code ZIP은 설치 파일이 아닙니다.
 2. QGIS의 플러그인 관리 및 설치 > ZIP 파일에서 설치로 설치합니다.
 3. 업데이트한 경우 QGIS를 재시작합니다. 기존 필드·값 프리셋은 유지됩니다.
+
+재시작하면 미적용 입력·대기 프리셋·객체 Undo 이력은 유지되지 않으므로 필요한 작업을 먼저 정리하세요.
 
 ## 기본 사용법
 
@@ -84,6 +95,7 @@ QGIS 레이어 목록에서 다른 레이어를 눌러도 입력 대상은 패�
 - Alt+1~9: 등록한 필드·값 입력
 - Alt+Left / Right: 이전 / 다음
 - Alt+Home / End: 처음 / 끝
+- Alt+Up / Down: 이전 / 다음 지도 테마. 레이어 패널에서 저장한 이름 순서로 순환하며 배경을 포함한 레이어 표시·스타일 묶음 전체를 적용합니다. UI 테마가 아닙니다. 지정 입력 레이어와 미저장 속성 편집은 유지하고 파일은 저장하지 않습니다. 패널이 보일 때 동작합니다.
 - Alt+Backspace: 직전 화면
 - Alt+Z: 객체 Undo
 
@@ -108,9 +120,11 @@ Choose the target layer in the panel, configure field/value presets, select feat
 The screenshots above show version 1.7.5 with test fields and example shortcut assignments, not the default bindings.
 
 Download the installation ZIP from [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) and use Plugins > Manage and Install Plugins > Install from ZIP. Restart QGIS after updating.
-Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Version 1.7.8 passed regression scripts and a temporary GeoPackage save/reopen check on Windows with QGIS 4.2.2 / Qt 6.11. QGIS 3.44 LTR support is retained but was not retested for 1.7.8; QGIS 3.44.15 / Qt 5.15.13 testing applies to 1.7.7. Earlier QGIS 3 releases are unsupported; Linux/macOS are untested. No extra packages or accounts are needed.
+Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Version 1.7.9 passed three regression scripts, nine focused tests, actual Qt Alt+Up/Down and Alt+1 key-event checks, and temporary GeoPackage save/reopen checks on Windows with QGIS 4.2.3 / Qt 6.11. The wrapper exits after test return; normal teardown is not verified. QGIS 3.44 LTR support is retained but was not retested for 1.7.9; QGIS 3.44.15 / Qt 5.15.13 testing applies to 1.7.7. Earlier QGIS 3 releases are unsupported. Linux/macOS execution and Plugin Manager installation are untested in this release. No extra packages or accounts are needed. Restarting discards unapplied inputs, staged presets and in-memory feature Undo history; finish any work you need to keep first.
 
-- Default keys: Alt+1–9 for presets, Alt+Left/Right/Home/End for navigation, Alt+Backspace for the previous view, Alt+Z for feature Undo. The gear dialog changes or clears bindings; Save applies them.
+Version 1.7.9 adds whole-map-theme cycling, immediate preset-value refresh without losing unrelated drafts, and two lookup optimizations. The ZIP builder now includes the map-theme module. A same-field draft is superseded only when every captured target received that field's applied value; partial or different targets keep their drafts. Staged or failed writes are not shown as applied values.
+
+- Default keys: Alt+1–9 for presets, Alt+Left/Right/Home/End for navigation, Alt+Up/Down for previous/next map theme, Alt+Backspace for the previous view, Alt+Z for feature Undo. Map themes cycle while the panel is visible and apply the saved visibility and styles of the whole layer tree, including background layers, without changing the designated editing target or saving files. These are not UI themes. The gear dialog changes or clears bindings; Save applies them.
 - Changes apply to the panel's designated layer, even when another layer is active or the panel is hidden. No selection means no changes.
 - Navigation flashes the destination. The bulb flashes the current selection without changing the view. Both work in No zoom mode.
 - Refresh explicitly applies the filter. Trash clears its input only. Editing and Undo do not re-evaluate filter membership.
@@ -127,14 +141,14 @@ QGIS Python 콘솔에서 저장소 경로를 바꿔 다음 테스트를 실행�
 ```python
 from pathlib import Path
 root = Path('/path/to/qgis-quick-field-keys')
-for name in ('test_qgis.py', 'test_navigation.py'):
+for name in ('test_qgis.py', 'test_navigation.py', 'test_optimization.py'):
     test = root / 'tests' / name
     exec(compile(test.read_text(encoding='utf-8'), str(test), 'exec'), {'__file__': str(test)})
 ```
 
 The tests use an isolated project and canvas with memory layers. They do not edit the current project or its files.
 For a standalone run, use the chosen QGIS installation's Python environment to run `tests/run_qgis.py`. It also checks Save by reopening a temporary GeoPackage. The test profile and data are separate from your QGIS profile and project.
-They cover presets, navigation, filters, locks, shortcut settings, Save and Undo. Physical keyboard input and installation through Plugin Manager are separate manual checks.
+They cover presets, navigation, filters, locks, shortcut settings, Save, Undo, whole-map-theme switching, lookup reuse and applied-value refresh with captured drafts. Theme tests send actual Qt Alt+Up/Down events; a separate isolated Qt check verified Alt+1. Physical keyboard use and installation through Plugin Manager remain separate manual checks.
 
 ```sh
 python build_release.py /path/to/output
