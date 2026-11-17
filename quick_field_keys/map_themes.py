@@ -1,5 +1,7 @@
 """Cycle saved map themes while retaining the designated editing layer."""
 from typing import TYPE_CHECKING
+import sys
+from .rust_themes import theme_index
 
 from qgis.core import QgsMapThemeCollection
 
@@ -10,6 +12,7 @@ if TYPE_CHECKING:
 class MapThemeSwitcher:
     def __init__(self, navigator: 'QuickFieldNavigator') -> None:
         self.navigator = navigator
+        self._theme_module = sys.modules[__name__]
         self.current_name: str | None = None
 
     def step(self, direction: int) -> None:
@@ -25,10 +28,9 @@ class MapThemeSwitcher:
         root = nav.project.layerTreeRoot()
         model = nav.iface.layerTreeView().layerTreeModel()
         state = QgsMapThemeCollection.createThemeFromCurrentState(root, model)
-        matches = [name for name in names if themes.mapThemeState(name) == state]
-        current = self.current_name if self.current_name in matches else next(iter(matches), None)
-        index = names.index(current) if current is not None else (-1 if direction > 0 else 0)
-        name = names[(index + direction) % len(names)]
+        matches = [themes.mapThemeState(name) == state for name in names]
+        current = names.index(self.current_name) if self.current_name in names else -1
+        name = names[theme_index(direction, current, matches)]
         themes.applyTheme(name, root, model)
         self.current_name = name
         nav.iface.mapCanvas().refresh()

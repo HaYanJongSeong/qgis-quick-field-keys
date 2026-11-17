@@ -268,14 +268,15 @@ assert not any(button.text() in ('Choose visible / editable columns...', 'Edit c
 assert nav.columns_button.objectName() == 'column_visibility'
 assert not nav.columns_button.icon().isNull()
 assert not hasattr(nav, 'shortcuts_enabled'), 'Navigation toggle must be removed'
-assert any(button.text() == 'Field value presets...' for button in nav.findChildren(QPushButton))
+assert nav.presets_button.text() == 'Shortcuts for value apply to Field'
+assert not hasattr(nav, 'immediate')
 nav_undo = nav.undo_button
 assert nav_undo.shortcut().toString() == 'Alt+Z'
 assert not nav_undo.icon().isNull()
 assert not nav.settings_button.icon().isNull()
-edit_row = nav.immediate.parentWidget().layout().itemAt(1).layout()
+edit_row = nav.presets_button.parentWidget().layout().itemAt(0).layout()
 assert [edit_row.itemAt(i).widget() for i in range(edit_row.count())] == [
-    nav.immediate, nav.save_button, nav.undo_button, nav.settings_button]
+    nav.presets_button, nav.columns_button, nav.save_button, nav.undo_button, nav.settings_button]
 assert nav.inline_editor.save_button is nav.save_button
 assert not any(button.text() in ('Apply pending', 'Discard pending') for button in nav.findChildren(QPushButton))
 for button in nav.findChildren(QPushButton) + nav.findChildren(QToolButton):

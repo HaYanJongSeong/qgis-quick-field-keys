@@ -22,7 +22,13 @@ def build(output):
             raise ValueError(f'Invalid public URL: {key}')
     assert general['license'] == 'GPL-3.0-or-later'
     files = {f'quick_field_keys/{name}': package / name
-             for name in ('__init__.py', 'plugin.py', 'navigation.py', 'field_editor.py', 'shortcuts.py', 'map_themes.py', 'metadata.txt', 'icon.svg', 'previous_view.svg', 'visible_fields.svg', 'field_locked.svg', 'field_unlocked.svg', 'settings.svg', 'flash_features.svg')}
+             for name in ('__init__.py', 'plugin.py', 'bulk_reads.py', 'navigation.py', 'field_editor.py', 'shortcuts.py', 'map_themes.py', 'rust_core.py', 'rust_session.py', 'rust_drafts.py', 'rust_shortcuts.py', 'rust_themes.py', 'metadata.txt', 'icon.svg', 'previous_view.svg', 'visible_fields.svg', 'field_locked.svg', 'field_unlocked.svg', 'settings.svg', 'flash_features.svg')}
+    files['quick_field_keys/rust_view.py'] = package / 'rust_view.py'
+    files['quick_field_keys/rust_save.py'] = package / 'rust_save.py'
+    files['quick_field_keys/rust_store.py'] = package / 'rust_store.py'
+    files['quick_field_keys/rust_identity.py'] = package / 'rust_identity.py'
+    files['quick_field_keys/rust_presets.py'] = package / 'rust_presets.py'
+    files['quick_field_keys/rust_edits.py'] = package / 'rust_edits.py'
     files.update({f'quick_field_keys/{name}': root / name
                   for name in ('README.md', 'LICENSE', 'LICENSE.FeatureNavEd', 'CHANGELOG.md')})
     for archive_name, source in files.items():
@@ -30,7 +36,8 @@ def build(output):
             raise FileNotFoundError(source)
         if source.suffix == '.py':
             ast.parse(source.read_text(encoding='utf-8'), filename=str(source))
-        if '__pycache__' in archive_name or source.suffix == '.zip':
+        if '__pycache__' in archive_name or (source.name not in {'LICENSE', 'LICENSE.FeatureNavEd'}
+                and source.suffix.lower() not in {'.py', '.txt', '.svg', '.md'}):
             raise ValueError('Generated files must not be included in the release.')
     license_text = (root / 'LICENSE').read_text(encoding='utf-8')
     assert 'GNU GENERAL PUBLIC LICENSE' in license_text
@@ -39,13 +46,15 @@ def build(output):
     output.mkdir(parents=True, exist_ok=True)
     archive = output / f'quick_field_keys_{general["version"]}.zip'
     # Never overwrite an existing release archive.
-    with ZipFile(archive, 'x', ZIP_DEFLATED) as zipped:
+    with ZipFile(archive, 'x', ZIP_DEFLATED, compresslevel=9) as zipped:
         for archive_name, source in files.items():
             zipped.write(source, archive_name)
     with ZipFile(archive) as zipped:
         assert zipped.testzip() is None
         assert set(zipped.namelist()) == set(files)
-        assert zipped.read('quick_field_keys/plugin.py') == (package / 'plugin.py').read_bytes()
+        assert len(zipped.namelist()) == len(files)
+        for archive_name, source in files.items():
+            assert zipped.read(archive_name) == source.read_bytes(), archive_name
     assert archive.stat().st_size < 25 * 1024 * 1024
     print(archive)
     return archive

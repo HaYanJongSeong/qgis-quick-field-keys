@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0
+
+- 실행되지 않는 네이티브 분기 91곳과 고정 슬롯 102개를 제거하고 단순 전달·대체 신호 계층을 직접 Python 호출로 바꿨습니다. 미사용 모듈 4개는 배포에서 제외하되 기존 Rust 개발 자료는 보존합니다.
+- Python에서 실행되지 않는 네이티브 분기·ABI 변환 코드를 정리하고 사용하지 않는 네이티브 보조 파일은 설치 ZIP에서 제외했습니다. 메타데이터의 중복 설명과 과거 기록은 줄이고 전체 변경 이력은 이 파일에 보존합니다.
+- 인라인 편집기 없이 대기값만 저장할 때 발생하던 오류를 수정했습니다. Python 전용 경로, 실제 Qt 위젯·반복 로드/언로드, 대기값 저장과 임시 GeoPackage 저장·재열기를 격리된 QGIS 4.2.3에서 검사했습니다.
+- QGIS 배포본을 Python 단독 실행으로 전환합니다. 플러그인 자체의 Rust 확장이나 DLL을 불러오지 않으며 설치 ZIP에 포함하지 않습니다. 기존 Rust 개발본은 별도로 보존합니다.
+- 프리셋은 편집 버퍼에 즉시 적용하는 방식으로 시작합니다. 이전에 저장한 비활성 설정은 무시하며 즉시 적용 체크박스와 모드 전환 단축키 항목을 제거했습니다.
+- 프리셋 버튼 이름을 `Shortcuts for value apply to Field`로 바꾸고 눈·저장·객체 Undo·설정을 같은 줄에 배치했습니다.
+- 지정 레이어, 필드 잠금, 원래 대상에 묶인 초안, 객체 Undo와 실패 시 원복을 유지합니다. 큰 편집 묶음은 필요한 속성만 읽고 읽기 캐시에 지오메트리를 담지 않습니다.
+- 저장은 수동입니다. Save는 다른 도구의 편집까지 포함해 지정 레이어의 모든 미저장 편집을 저장하며, 저장한 변경은 객체 Undo로 되돌릴 수 없습니다.
+- Rust 개발본의 성능 측정값은 Python 배포본의 개선율로 사용하지 않습니다. QGIS 3.44, Linux/macOS와 Plugin Manager 설치 검증은 별도 확인이 필요합니다.
+
+### English
+
+- Run the QGIS package entirely in Python, without loading or bundling the plugin's Rust extension or DLL. Preserve the previous Rust development version separately.
+- Start with immediate presets regardless of the earlier saved mode. Remove immediate-mode checkboxes and the mode-toggle shortcut entry.
+- Rename the preset button to `Shortcuts for value apply to Field`; place it with field visibility, Save, feature Undo and settings on one row.
+- Retain designated-layer writes, field locks, captured drafts, feature Undo and rollback on failed writes. Batch reads request only required attributes and keep geometry out of the read cache.
+- Save remains explicit and layer-wide, including edits from other tools. Saved changes cannot be restored by feature Undo.
+- Rust development benchmarks do not establish Python speedups. QGIS 3.44, Linux/macOS and Plugin Manager installation require separate verification.
+
 ## 1.7.9
 
 ### 달라진 점

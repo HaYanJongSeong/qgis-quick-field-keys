@@ -4,9 +4,10 @@ Navigation behavior is inspired by FeatureNavEd 1.0.8 by Irene Jaya (MIT).
 This independent implementation uses explicit editing and an isolated namespace.
 See LICENSE.FeatureNavEd for the original project's license and attribution.
 """
-import hashlib
+from . import rust_core, rust_session, rust_view, rust_save, rust_store, rust_identity
 import json
 import os
+import sys
 from pathlib import Path
 
 from qgis.core import (
@@ -32,8 +33,10 @@ class QuickFieldNavigator(QDockWidget):
         super().__init__('Quick Field Keys - Navigator', plugin.iface.mainWindow())
         self.setObjectName('QuickFieldKeysNavigatorDock')
         self.plugin = plugin
+        self._session_module = sys.modules[__name__]
         self.iface = plugin.iface
         self.project = project or QgsProject.instance()
+        self._running = True
         self._ready = False
         self._restoring = True
         self._layout_restored = False
@@ -191,9 +194,13 @@ class QuickFieldNavigator(QDockWidget):
         edit_layout.setSpacing(4)
         layout.addWidget(edit_group)
         row = QHBoxLayout()
-        presets = QPushButton('Field value presets...')
+        row.setObjectName('preset_toolbar')
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(4)
+        presets = QPushButton('Shortcuts for value apply to Field')
+        presets.setObjectName('value_presets')
         self.presets_button = presets
-        presets.setToolTip('Field value presets — Configure preset fields and values. Default keys are Alt+1–9; change bindings in shortcut settings.\n필드 값 설정 — 프리셋의 필드와 값을 지정합니다. 기본 키는 Alt+1~9이며 단축키 설정에서 변경할 수 있습니다.')
+        presets.setToolTip('Shortcuts for value apply to Field: configure fields and values for immediate, undoable preset edits. Default keys are Alt+1–9; file save remains manual.\n필드 값 적용 단축키: 프리셋 필드와 값을 지정합니다. 기본 키 Alt+1~9로 즉시 편집하며 Undo로 되돌릴 수 있습니다. 파일 저장은 별도입니다.')
         presets.clicked.connect(plugin.configure)
         row.addWidget(presets, 1)
         self.columns_button = QToolButton(self)
@@ -203,12 +210,6 @@ class QuickFieldNavigator(QDockWidget):
         self.columns_button.setToolTip('Visible fields — Choose which columns to show or hide; confirmed columns remain editable.\n표시 필드 — 보일 컬럼과 숨길 컬럼을 선택합니다. 확인하면 선택한 컬럼만 표시하고 편집할 수 있습니다.')
         self.columns_button.clicked.connect(self.choose_current_fields)
         row.addWidget(self.columns_button)
-        edit_layout.addLayout(row)
-        self.immediate = QCheckBox('Apply presets immediately to layer edits')
-        self.immediate.setChecked(plugin.immediate)
-        self.immediate.toggled.connect(plugin.set_immediate)
-        row = QHBoxLayout()
-        row.addWidget(self.immediate, 1)
         self.save_button = QToolButton(self)
         self.save_button.setObjectName('save_feature_edits')
         self.save_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
@@ -281,6 +282,8 @@ class QuickFieldNavigator(QDockWidget):
         self.refresh_quick_status()
 
     def change_layer(self, layer):
+        if not self._running:
+            return
         if self.inline_editor is not None and self.layer is not layer and not self.allow_field_navigation():
             self.layer_combo.blockSignals(True)
             self.layer_combo.setLayer(self.layer)
@@ -350,14 +353,10 @@ class QuickFieldNavigator(QDockWidget):
             self.plugin.warn(f'Could not load the navigation list: {error}')
             return
         self.filtered_ids = list(ids)
-        if self.selected_only.isChecked():
-            snapshot = self.selection_snapshot or set()
-            ids = [fid for fid in ids if fid in snapshot]
-        self.ids = ids
         self.applied_filter = expression
         selected = self.layer.selectedFeatureIds()
-        current = previous if previous in ids else next((fid for fid in selected if fid in ids), None)
-        self.index = ids.index(current) if current is not None else -1
+        scope = (self.selection_snapshot or set()) if self.selected_only.isChecked() else None
+        self.ids, self.index = rust_view.choose(ids, scope, (previous, selected))
         self.update_position()
         self.save_session()
 
@@ -374,12 +373,9 @@ class QuickFieldNavigator(QDockWidget):
         if name:
             request.addOrderBy('$id', True, False)
         ids = [feature.id() for feature in self.layer.getFeatures(request)] if self.filtered_ids else []
-        if self.selected_only.isChecked():
-            ids = [fid for fid in ids if fid in (self.selection_snapshot or set())]
-        self.ids = ids
         selected = self.layer.selectedFeatureIds()
-        current = previous if previous in ids else next((fid for fid in selected if fid in ids), None)
-        self.index = ids.index(current) if current is not None else -1
+        scope = (self.selection_snapshot or set()) if self.selected_only.isChecked() else None
+        self.ids, self.index = rust_view.choose(ids, scope, (previous, selected))
         self.scope_status.setText(f'Scope: {len(self.selection_snapshot or set())} captured feature IDs')
         self.scope_status.setVisible(self.selected_only.isChecked())
         self.update_position()
@@ -412,8 +408,7 @@ class QuickFieldNavigator(QDockWidget):
     def step(self, direction):
         if not self.ids:
             return
-        target = (0 if direction > 0 else len(self.ids) - 1) if self.index < 0 else self.index + direction
-        self.go_to(target % len(self.ids))
+        self.go_to(rust_core.navigation_step(self.index, direction, len(self.ids)))
 
     def go_to(self, index):
         if self.layer is None or not 0 <= index < len(self.ids):
@@ -578,7 +573,8 @@ class QuickFieldNavigator(QDockWidget):
             if not self.plugin.apply_changes(layer, changes, 'Apply drafts before file save'):
                 return False
             self.plugin.discard_pending()
-            editor.load_rows()
+            if editor is not None:
+                editor.load_rows()
         if not layer.isEditable() or not layer.isModified():
             self.refresh_save_state()
             return False
@@ -598,7 +594,12 @@ class QuickFieldNavigator(QDockWidget):
             valid = layer is not None and layer.isValid() and not layer.readOnly()
             pending = bool(self.plugin.pending_changes) and self.plugin.pending_layer is layer
             draft = editor is not None and editor.layer is layer and editor.has_form_edits()
-            enabled = valid and (draft or pending or (layer.isEditable() and layer.isModified()))
+            flags = int(valid) | (int(draft) << 1) | (int(pending) << 2)
+            if valid and not (draft or pending):
+                flags |= int(layer.isEditable()) << 3
+                if flags & 8:
+                    flags |= int(layer.isModified()) << 4
+            enabled = rust_save.save_enabled(flags)
         except RuntimeError:
             enabled = False
         self.save_button.setEnabled(bool(enabled))
@@ -652,7 +653,7 @@ class QuickFieldNavigator(QDockWidget):
             'back': self.back_button, 'undo': self.undo_button, 'presets': self.presets_button,
             'columns': self.columns_button, 'refresh': self.filter_refresh, 'clear': self.filter_clear,
             'capture': self.capture_button, 'scope': self.selected_only, 'settings': self.settings_button,
-            'immediate': self.immediate, 'expression': self.expression_button,
+            'expression': self.expression_button,
             'save_feature': self.save_button,
             'flash': self.flash_button,
         }
@@ -681,12 +682,8 @@ class QuickFieldNavigator(QDockWidget):
         self.plugin.warn('Focus a field input or its lock button first. / 먼저 필드 입력칸이나 잠금 버튼에 포커스를 두세요.')
 
     def refresh_quick_status(self):
-        self.immediate.blockSignals(True)
-        self.immediate.setChecked(self.plugin.immediate)
-        self.immediate.blockSignals(False)
         self.pending_status.setText(f'Pending changes: {len(self.plugin.pending_changes)}. Apply / discard from the plugin menu; file save remains manual.')
         self.pending_status.setVisible(bool(self.plugin.pending_changes))
-        self.immediate.setToolTip('Immediate preset application — On: apply preset shortcuts to the edit buffer. Off: stage until Apply pending shortcuts in the plugin menu. File save remains manual.\n프리셋 즉시 적용 — 켜면 지정한 단축키를 편집 버퍼에 적용합니다. 끄면 대기값으로 보관하며 플러그인 메뉴에서 적용·폐기합니다. 실제 파일 저장은 별도입니다.')
         self.update_position()
 
     def undo(self, *args):
@@ -717,8 +714,12 @@ class QuickFieldNavigator(QDockWidget):
             self.layer_combo.setLayer(None)
 
     def shutdown(self):
+        if not self._running:
+            return
         self.save_session()
         self.save_layout()
+        self._running = False
+        self.layer_combo.layerChanged.disconnect(self.change_layer)
         for shortcut in self.shortcuts:
             shortcut.setEnabled(False)
         if self.layer is not None:
@@ -754,12 +755,12 @@ class QuickFieldNavigator(QDockWidget):
 
     def session_key(self):
         path = self.project.absoluteFilePath() or self.project.fileName()
-        identity = os.path.normcase(os.path.abspath(path)) if path else '__unsaved_project__'
-        return 'quick_field_keys/navigator/sessions/' + hashlib.sha256(identity.encode('utf-8')).hexdigest()
+        identity = os.path.normcase(os.path.abspath(path)) if path else ''
+        return rust_identity.session_key(identity)
 
     @staticmethod
     def source_hash(layer):
-        return hashlib.sha256((layer.providerType() + '\n' + layer.source()).encode('utf-8')).hexdigest()
+        return rust_identity.source_hash(layer.providerType(), layer.source())
 
     def save_session(self, *args):
         if not self._ready or self._restoring or self.layer is None:
@@ -770,21 +771,18 @@ class QuickFieldNavigator(QDockWidget):
         try:
             if self.project.mapLayer(self.layer.id()) is not self.layer:
                 return
-            current = self.ids[self.index] if 0 <= self.index < len(self.ids) else None
-            state = {
-                'layer_id': self.layer.id(), 'layer_name': self.layer.name(),
-                'source_hash': self.source_hash(self.layer), 'filter': self.applied_filter,
-                'sort_field': self.sort_field.currentData(), 'ascending': self.ascending.isChecked(),
-                'feature_id': current, 'index': self.index,
-                'selection': self.layer.selectedFeatureIds(),
-                'selected_only': self.selected_only.isChecked(),
-                'selection_snapshot': sorted(self.selection_snapshot or set()),
-                'zoom_mode': self.zoom_mode.currentIndex(),
-                'scale': self.scale.value(),
-            }
+            capture = rust_store.SessionCapture(
+                layer_id=self.layer.id(), layer_name=self.layer.name(),
+                source_hash=self.source_hash(self.layer), filter=self.applied_filter,
+                sort_field=self.sort_field.currentData(), ascending=self.ascending.isChecked(),
+                ids=self.ids, index=self.index, selection=self.layer.selectedFeatureIds(),
+                selected_only=self.selected_only.isChecked(),
+                selection_snapshot=list(self.selection_snapshot or set()),
+                zoom_mode=self.zoom_mode.currentIndex(), scale=self.scale.value())
+            serialized = rust_store.serialize(capture)
         except RuntimeError:
             return
-        QgsSettings().setValue(self._session_key, json.dumps(state, ensure_ascii=False))
+        QgsSettings().setValue(self._session_key, serialized)
 
     def restore_session(self):
         self._session_key = self.session_key()
@@ -792,12 +790,21 @@ class QuickFieldNavigator(QDockWidget):
         if not state:
             return False
         layer = self.project.mapLayer(state.get('layer_id', ''))
-        if not isinstance(layer, QgsVectorLayer) or self.source_hash(layer) != state.get('source_hash'):
-            matches = [candidate for candidate in self.project.mapLayers().values()
-                       if isinstance(candidate, QgsVectorLayer)
-                       and candidate.name() == state.get('layer_name')
-                       and self.source_hash(candidate) == state.get('source_hash')]
-            layer = matches[0] if len(matches) == 1 else None
+        direct = int(isinstance(layer, QgsVectorLayer))
+        if direct:
+            direct |= int(rust_identity.same_text(self.source_hash(layer), state.get('source_hash'))) << 1
+        if not rust_session.direct_layer(direct):
+            candidates = list(self.project.mapLayers().values())
+            observations = []
+            for candidate in candidates:
+                flags = int(isinstance(candidate, QgsVectorLayer))
+                if flags:
+                    flags |= int(rust_identity.same_text(candidate.name(), state.get('layer_name'))) << 2
+                    if flags & 4:
+                        flags |= int(rust_identity.same_text(self.source_hash(candidate), state.get('source_hash'))) << 1
+                observations.append(flags)
+            chosen = rust_session.layer_index(observations)
+            layer = candidates[chosen] if chosen >= 0 else None
         if layer is None:
             return False
         previous = self._restoring
@@ -822,23 +829,15 @@ class QuickFieldNavigator(QDockWidget):
             self.selected_only.setChecked(bool(state.get('selected_only', False)))
             self.selected_only.blockSignals(False)
             snapshot = state.get('selection_snapshot', [])
-            self.selection_snapshot = {fid for fid in snapshot if isinstance(fid, int)} if isinstance(snapshot, list) else set()
+            self.selection_snapshot = {fid for fid in snapshot if rust_session.selection_candidate(isinstance(fid, int), True)} if isinstance(snapshot, list) else set()
             mode = state.get('zoom_mode', 0)
-            # Migrate the old checkbox state without losing the user's no-zoom choice.
-            if state.get('auto_zoom') is False:
-                mode = 3
-            self.zoom_mode.setCurrentIndex(mode if isinstance(mode, int) and 0 <= mode <= 3 else 0)
+            self.zoom_mode.setCurrentIndex(rust_session.zoom_mode(mode, state.get('auto_zoom')))
             scale = state.get('scale', 1000)
-            self.scale.setValue(scale if isinstance(scale, (int, float)) and 1 <= scale <= 100000000 else 1000)
+            self.scale.setValue(rust_session.scale(scale))
             self.reload_features()
             fid = state.get('feature_id')
             index = state.get('index', -1)
-            if fid in self.ids:
-                self.index = self.ids.index(fid)
-            elif isinstance(index, int) and index >= 0 and self.ids:
-                self.index = min(index, len(self.ids) - 1)
-            else:
-                self.index = -1
+            self.index = rust_session.restore_index(self.ids, (fid, index))
             self.update_position()
             self._restored_selection = state.get('selection', [])
             return True
@@ -852,18 +851,20 @@ class QuickFieldNavigator(QDockWidget):
             return
         selected = getattr(self, '_restored_selection', None)
         self._restored_selection = None
-        if isinstance(selected, list) and len(selected) > 1:
-            selected = [fid for fid in selected if isinstance(fid, int) and self.layer.getFeature(fid).isValid()]
+        count = len(selected) if isinstance(selected, list) else -1
+        action = rust_session.open_action(count, 0 <= self.index < len(self.ids), self.zoom_mode.currentIndex())
+        if action & rust_session.OpenAction.MULTI:
+            selected = [fid for fid in selected if rust_session.selection_candidate(isinstance(fid, int), isinstance(fid, int) and self.layer.getFeature(fid).isValid())]
             self.iface.setActiveLayer(self.layer)
             self._navigating = True
             try:
                 self.layer.selectByIds(selected)
             finally:
                 self._navigating = False
-            if self.zoom_mode.currentIndex() != 3 and 0 <= self.index < len(self.ids):
+            if rust_session.open_action(count, 0 <= self.index < len(self.ids), self.zoom_mode.currentIndex()) & rust_session.OpenAction.ZOOM:
                 self.zoom_to(self.layer.getFeature(self.ids[self.index]))
             self.update_position()
-        elif 0 <= self.index < len(self.ids):
+        elif action & rust_session.OpenAction.GO:
             self.go_to(self.index)
 
     def project_loaded(self, *args):

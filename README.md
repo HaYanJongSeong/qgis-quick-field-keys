@@ -1,164 +1,96 @@
 # Quick Field Keys
 
-객체를 하나씩 넘기면서 속성값을 입력하는 QGIS 플러그인입니다.
-자주 쓰는 값은 단축키에 등록하고 직접 수정할 필드는 패널 아래에 꺼내 놓고 쓸 수 있습니다.
+지정한 QGIS 레이어의 객체를 탐색하고 단축키로 속성값을 반복 입력하는 플러그인입니다. 2.0.0은 Python 단독으로 실행하며 플러그인 자체의 Rust 확장·DLL을 설치하거나 불러오지 않습니다.
 
-[설치 파일](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) · [오류 제보](https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues) · [English](#english)
+[설치 ZIP](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) · [변경 이력](CHANGELOG.md) · [오류 제보](https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues) · [English](#english)
 
-## 화면 예시
+## 설치와 검증 범위
 
-### 탐색·편집 패널
+QGIS 3.44 LTR과 QGIS 4.2 이상 4.x를 대상으로 합니다. 별도 Python 패키지나 계정은 필요하지 않습니다.
 
-![Quick Field Keys 탐색·편집 패널 예시](https://raw.githubusercontent.com/HaYanJongSeong/qgis-quick-field-keys/main/docs/images/panel.png)
+1. Releases에서 `quick_field_keys_2.0.0.zip`을 받습니다. 자동 생성된 Source code ZIP은 설치 파일이 아닙니다.
+2. QGIS의 **플러그인 관리 및 설치 → ZIP 파일에서 설치**에서 선택합니다.
+3. 업데이트 후 QGIS를 재시작합니다. 기존 프리셋과 단축키 설정은 유지합니다. 재시작하면 미적용 입력·대기값·객체 Undo 이력은 사라지므로 필요한 작업을 먼저 정리하세요.
 
-1.7.5의 테스트 레이어 화면입니다. `status`, `rank`는 예시 필드이며 실제로는 선택한 레이어의 필드가 표시됩니다.
-위에서부터 레이어와 정렬, 필터, 객체 이동과 줌, 입력 설정, 필드 편집 순서입니다.
+Python 2.0.0의 회귀·정책·위젯·반복 로드/언로드와 임시 GeoPackage 저장·재열기는 Windows QGIS 4.2.3 / Qt 6.11의 격리된 프로세스에서 검사했습니다. QGIS 3.44, Linux/macOS, 물리 키보드와 Plugin Manager 설치는 이번 버전에서 확인하지 않았습니다. 과거 검증 기록은 CHANGELOG.md에 있습니다.
 
-### 단축키 설정
+## 사용
 
-![Quick Field Keys 단축키 설정 예시](https://raw.githubusercontent.com/HaYanJongSeong/qgis-quick-field-keys/main/docs/images/shortcuts.png)
+1. 툴바 아이콘으로 패널을 열고 입력할 레이어를 지정합니다.
+2. `Shortcuts for value apply to Field`에서 단축키별 필드와 값을 정합니다. 예: Alt+1은 `status = done`, Alt+2는 `status = review`.
+3. 지정 레이어에서 객체를 선택하고 단축키를 누릅니다. 여러 객체를 선택하면 모두 적용하고, 선택이 없으면 변경하지 않습니다.
+4. 결과를 확인한 뒤 디스크 아이콘으로 저장합니다.
 
-Undo 오른쪽 톱니바퀴로 엽니다. 각 입력칸 옆의 X는 해당 키 지정을 비웁니다. 저장을 눌러야 적용됩니다. 취소하면 기존 설정을 유지합니다.
-화면의 `Ctrl+Alt+N`과 해제된 프리셋 9는 테스트용 설정입니다. 기본 단축키는 아래 안내를 참고하세요.
+프리셋은 기본으로 편집 버퍼에 즉시 적용합니다. 이전의 비활성 설정은 무시하며 모드를 바꾸는 체크박스는 없습니다. 프리셋·눈·저장·객체 Undo·설정은 한 줄에 있습니다.
 
-## 1.7.9 변경 내역
+**Save는 현재 객체만 저장하지 않습니다. 다른 도구의 편집까지 포함해 지정 레이어의 모든 미저장 편집을 저장합니다. 파일 자동 저장은 없으며, 저장한 변경은 객체 Undo로 되돌릴 수 없습니다.**
 
-Alt+Up / Down으로 레이어 패널에 저장한 지도 테마를 앞뒤로 전환합니다. 처음과 끝에서는 순환합니다. UI 테마가 아니라 배경을 포함한 레이어 표시·스타일 묶음 전체를 적용합니다. 속성 입력 대상은 패널에서 지정한 레이어로 유지하며 테마 전환은 파일을 저장하지 않습니다. 패널이 보일 때 동작하고 톱니바퀴 설정에서 단축키를 바꾸거나 해제할 수 있습니다.
+저장 전에 미적용 입력과 대기값을 반영합니다. 같은 필드에는 폼 입력이 우선합니다. 저장 후에도 편집 모드를 유지하며, 실패하면 오류를 표시하고 버퍼를 임의로 롤백하지 않습니다.
 
-Alt+1~9로 값을 넣었는데 패널에 이전 값이 남던 문제를 고쳤습니다. 다른 컬럼에 미적용 입력이 있어도 실제로 적용한 컬럼은 바로 갱신합니다. 다른 컬럼의 초안과 원래 입력 대상은 유지합니다. 같은 컬럼의 초안은 캡처한 모든 객체에 프리셋이 적용된 경우에만 새 값으로 대체하므로 나중에 이동할 때 오래된 입력으로 다시 덮어쓰지 않습니다. 다른 객체나 일부 객체에만 적용한 경우에는 기존 초안을 임의로 버리지 않습니다. 대기 프리셋은 실제로 적용하기 전까지 입력값처럼 표시하지 않으며 잠금이나 쓰기 실패가 있으면 입력을 유지합니다.
+다른 레이어를 활성화하거나 패널을 숨겨도 입력 대상은 유지합니다. 지정 대상이 삭제되거나 유효하지 않으면 다른 레이어에 대신 쓰지 않습니다. 패널을 한 번도 열지 않았을 때만 활성 레이어를 사용합니다.
 
-연속 편집의 Undo 이력을 묶을 때 이미 가진 값을 다시 조회하던 처리를 없앴습니다. 폼을 만들 때 반복하던 쓰기 가능 필드와 위젯 레지스트리 조회도 한 번으로 줄였습니다. 설치 ZIP에서 지도 테마 모듈이 빠지던 문제를 고쳤습니다.
+## 탐색과 필터
 
-## 설치
-
-QGIS 3.44 LTR과 QGIS 4.2 이상, 4.x에서 사용합니다.
-Windows의 QGIS 4.2.3 / Qt 6.11에서 회귀 스크립트 3개와 집중 검사 9개를 실행했습니다. 실제 Qt 키 이벤트로 Alt+Up / Down 테마 전환과 Alt+1 직후의 패널 갱신을 확인했고 임시 GeoPackage의 저장·재열기도 검사했습니다. 테스트 반환 후에는 별도 래퍼로 프로세스를 종료했으며 정상 teardown 완료를 확인한 것은 아닙니다.
-QGIS 3.44 LTR 지원은 유지하지만 1.7.9에서는 재시험하지 않았습니다. QGIS 3.44.15 / Qt 5.15.13 검증은 1.7.7 기준입니다. Linux/macOS 실행과 Plugin Manager를 통한 설치는 이번에 확인하지 않았습니다.
-3.44보다 오래된 QGIS 3 버전은 지원하지 않습니다. Linux와 macOS에서는 아직 확인하지 않았습니다.
-별도 Python 패키지나 계정은 필요하지 않습니다.
-
-1. [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest)에서 `quick_field_keys_버전.zip`을 받습니다. 자동 생성된 Source code ZIP은 설치 파일이 아닙니다.
-2. QGIS의 플러그인 관리 및 설치 > ZIP 파일에서 설치로 설치합니다.
-3. 업데이트한 경우 QGIS를 재시작합니다. 기존 필드·값 프리셋은 유지됩니다.
-
-재시작하면 미적용 입력·대기 프리셋·객체 Undo 이력은 유지되지 않으므로 필요한 작업을 먼저 정리하세요.
-
-## 기본 사용법
-
-1. 툴바의 Quick Field Keys 아이콘을 눌러 패널을 엽니다.
-2. 패널 맨 위에서 입력할 레이어를 지정합니다.
-3. Field value presets...에서 단축키마다 필드와 값을 정합니다. 예를 들어 Alt+1은 `status = done`, Alt+2는 `status = review`로 둡니다.
-4. 지정 레이어의 객체를 선택하고 단축키를 누릅니다. 여러 객체를 선택하면 모두 같은 값이 들어갑니다. 선택이 없으면 아무것도 바꾸지 않습니다.
-5. 결과를 확인하고 디스크 아이콘으로 저장합니다.
-
-**저장 버튼은 현재 객체만 저장하는 버튼이 아닙니다. 지정 레이어의 모든 미저장 편집을 파일에 저장합니다. 다른 QGIS 도구에서 수정한 내용도 함께 저장됩니다. 저장한 변경은 객체 Undo로 되돌릴 수 없습니다.**
-
-단축키 입력 자체는 파일을 저장하지 않습니다. 즉시 적용을 켜면 편집 버퍼에 반영하고, 끄면 대기값으로 보관합니다.
-저장 버튼은 미적용 필드와 대기값을 반영한 뒤 파일에 저장하며 편집 모드는 유지합니다.
-파일 저장 없이 대기값만 반영하려면 플러그인 메뉴의 Apply pending shortcuts를 사용하세요.
-
-QGIS 레이어 목록에서 다른 레이어를 눌러도 입력 대상은 패널에서 지정한 레이어입니다. 패널을 숨겨도 유지됩니다.
-대상이 삭제되거나 비어 있으면 다른 레이어에 대신 쓰지 않습니다. 패널을 한 번도 열지 않은 경우에만 활성 레이어를 사용합니다.
-
-## 이동과 필터
-
-- Sort by로 정렬 필드를 고르고 Ascending으로 오름·내림차순을 바꿉니다.
-- 처음·이전·다음·끝 버튼으로 이동합니다. 첫 객체에서 이전을 누르면 마지막으로, 마지막에서 다음을 누르면 처음으로 돌아갑니다.
-- 객체를 이동할 때 자동으로 반짝입니다. 전구 버튼을 누르면 지정 레이어의 현재 선택 객체를 다시 반짝입니다. 선택이나 축척은 바꾸지 않습니다.
-- 줌은 객체 맞춤, 현재 축척 유지, 고정 축척, 줌 안 함 중 고릅니다. No zoom에서도 반짝임은 동작합니다.
-- 카메라와 왼쪽 화살표 버튼은 직전 선택과 화면으로 돌아갑니다. 필터는 바꾸지 않습니다. 화면 이력은 현재 실행 중 최근 100개입니다.
-- 필터는 표현식을 입력한 뒤 새로고침을 눌러 적용합니다. 편집·Undo·정렬 중에는 조건을 다시 평가하지 않습니다. 레이어를 열거나 상태를 복원할 때는 목록을 한 번 생성합니다.
-- 쓰레기통은 필터 입력만 비웁니다. 그 변경도 새로고침해야 적용됩니다. 객체를 삭제하지 않습니다.
-- Use current selection은 현재 선택 범위를 고정합니다. Captured selection only를 켜면 그 범위 안에서만 이동합니다.
-
-필터는 플러그인의 이동 목록에만 적용됩니다. 레이어의 원본 데이터나 provider 필터는 바꾸지 않습니다.
+- 정렬 필드와 방향을 지정하고 처음·이전·다음·끝으로 이동합니다. 첫 객체의 이전은 마지막으로, 마지막의 다음은 처음으로 순환합니다.
+- 표현식 필터는 새로고침을 눌러 적용합니다. 편집·Undo·정렬은 필터를 다시 평가하지 않습니다. 쓰레기통은 필터 입력만 비우며 새로고침해야 반영합니다. 데이터나 provider 필터는 바꾸지 않습니다.
+- Use current selection으로 선택 범위를 캡처하고 Captured selection only로 탐색 범위를 제한합니다.
+- 줌은 객체 맞춤·현재 축척 유지·고정 축척·No zoom 중 선택합니다. 이동 시 자동으로 반짝이며 전구는 현재 선택을 다시 반짝입니다. No zoom에서도 반짝이고 선택·축척은 바꾸지 않습니다.
+- 카메라와 왼쪽 화살표는 필터와 무관하게 직전 선택·화면을 복원합니다. 화면 이력은 세션당 최근 100개입니다.
+- 마지막 레이어·적용 필터·정렬·순번·패널 위치를 기억합니다. 지도 테마 전환은 배경을 포함한 저장된 레이어 표시·스타일 전체를 적용하며, 입력 대상과 미저장 편집은 유지합니다. UI 테마 전환은 아닙니다.
 
 ## 필드 편집과 Undo
 
-눈 아이콘으로 패널 아래에 표시할 필드를 고릅니다. 입력을 바꾼 필드만 반영합니다. 다중 선택에서 값이 섞여 있어도 건드리지 않은 필드는 덮어쓰지 않습니다.
+눈 아이콘으로 편집할 필드를 고릅니다. 바꾼 필드만 반영하며, 다중 선택에서 값이 섞여 있어도 건드리지 않은 필드는 덮어쓰지 않습니다. 필드 잠금은 이 플러그인의 폼·프리셋·대기값·Undo 쓰기를 막지만 다른 QGIS 도구나 기존 편집의 저장은 막지 않습니다. 표시 필드와 잠금은 레이어별로 기억합니다.
 
-입력칸 오른쪽 Lock은 이 플러그인의 폼·프리셋·대기값 적용·Undo에서 해당 필드에 새 값을 쓰는 것을 막습니다.
-다른 QGIS 도구의 편집을 잠그거나, 이미 편집 버퍼에 있는 값의 파일 저장을 막지는 않습니다.
-잠금과 표시 필드는 레이어별로 기억합니다.
+직접 입력한 초안은 이동 전에 원래 대상의 편집 버퍼에 반영합니다. 외부 선택·필터 변경은 초안 대상을 바꾸지 않습니다. 잘못된 값·잠금·쓰기 실패는 입력을 보존하고 이동을 막습니다. 프리셋은 실제 반영한 필드만 갱신하며 관계없는 초안을 보존합니다. 같은 필드의 초안은 캡처 대상 전체에 쓰기가 성공했을 때만 대체합니다.
 
-직접 입력한 값은 객체 이동 전에 원래 선택 대상의 편집 버퍼에 자동 반영합니다. 폐기 확인창이나 파일 자동 저장은 없습니다. 값이 유효하지 않거나 Lock·쓰기 실패로 반영하지 못하면 입력을 유지하고 이동을 막습니다. 외부 선택·필터 변경은 미적용 입력의 대상을 바꾸지 않습니다.
-대기 프리셋도 입력 당시의 선택 객체에 묶입니다. 한 번에 한 레이어만 대기시킬 수 있습니다.
-대기값은 재시작 후 남지 않습니다. 플러그인 메뉴의 Discard pending shortcuts로 버릴 수 있습니다.
+대기값은 입력 당시의 대상에 묶이며 한 번에 한 레이어만 대기시킬 수 있습니다. 파일 저장 없이 적용하거나 버리려면 플러그인 메뉴의 Apply pending shortcuts / Discard pending shortcuts를 사용합니다.
 
-객체 Undo는 마지막 선택 객체에 연속 입력한 플러그인 변경을 묶어서 되돌립니다. 다중 선택도 한 묶음입니다.
-복원한 객체는 선택하고 화면을 맞춘 뒤 반짝입니다. 필터 밖이거나 No zoom이어도 해당 객체로 이동합니다.
-다른 도구의 편집은 되돌리지 않으며, 같은 필드에 외부 변경이 생겼으면 복원을 중단합니다.
-최근 200묶음을 현재 세션에서 보관합니다. 저장·롤백·외부 레이어 Undo·레이어 삭제·재시작 후에는 해당 이력을 사용할 수 없습니다.
+객체 Undo는 마지막 선택 집합에 연속 입력한 플러그인 변경을 묶어 복원하고 대상 객체를 선택·화면 맞춤·반짝임으로 표시합니다. 필터 밖이나 No zoom에서도 복원 대상을 표시합니다. 다른 도구의 편집은 되돌리지 않으며 같은 필드의 외부 변경, 누락 대상이나 복원 실패가 있으면 중단합니다. 최근 200묶음을 세션 메모리에 보관합니다. 저장·롤백·외부 레이어 Undo·삭제·재시작 후에는 해당 이력을 사용할 수 없습니다.
+
+값은 표현식이 아닌 문자 그대로 입력합니다. 빈 문자열과 NULL은 다릅니다. NULL에는 Set NULL을 사용하세요. 잘못된 숫자 입력은 거부하며 기본키·조인·표현식 필드는 제외합니다. 다른 필드의 기본값 재계산은 건너뜁니다. provider 제약으로 저장이 실패할 수 있으며 큰 선택 집합은 처리 중 잠시 멈출 수 있습니다.
 
 ## 기본 단축키
 
-- Alt+1~9: 등록한 필드·값 입력
-- Alt+Left / Right: 이전 / 다음
-- Alt+Home / End: 처음 / 끝
-- Alt+Up / Down: 이전 / 다음 지도 테마. 레이어 패널에서 저장한 이름 순서로 순환하며 배경을 포함한 레이어 표시·스타일 묶음 전체를 적용합니다. UI 테마가 아닙니다. 지정 입력 레이어와 미저장 속성 편집은 유지하고 파일은 저장하지 않습니다. 패널이 보일 때 동작합니다.
-- Alt+Backspace: 직전 화면
-- Alt+Z: 객체 Undo
+| 키 | 동작 |
+|---|---|
+| Alt+1~9 | 프리셋 적용 |
+| Alt+Left / Right | 이전 / 다음 |
+| Alt+Home / End | 처음 / 끝 |
+| Alt+Up / Down | 이전 / 다음 지도 테마 |
+| Alt+Backspace | 직전 화면 |
+| Alt+Z | 객체 Undo |
 
-톱니바퀴 설정에서 바꾸거나 해제할 수 있습니다. 저장·반짝임 등 나머지 기능은 기본 키가 없으므로 필요한 경우 지정하세요.
-중복 키, 다른 QGIS 단축키와 충돌하는 키, 일반 문자만 사용하는 키, 여러 단계의 키 조합은 받지 않습니다.
-다른 QGIS 단축키는 변경하지 않습니다.
-
-이동 단축키는 패널이 보일 때만 동작합니다. FeatureNavEd가 켜져 있으면 겹치는 이동 단축키를 중지합니다.
-마지막 레이어·필터·정렬·순번·패널 위치는 기억합니다. 버튼에 마우스를 올리면 영어와 한국어 설명이 나옵니다.
-
-## 입력 시 참고
-
-값은 표현식이 아닌 문자 그대로 입력합니다. 빈 문자열과 NULL은 다릅니다. NULL을 넣으려면 Set NULL을 선택하세요.
-숫자 필드에 맞지 않는 값은 거부합니다. provider 기본키, 조인 필드, 표현식 필드는 입력 대상에서 제외합니다.
-다른 필드의 기본값 재계산은 건너뜁니다. 필드 제약이나 데이터 제공자의 규칙 때문에 저장이 실패할 수 있으니 결과를 확인하세요.
-실패하면 오류를 표시합니다. 편집 버퍼를 임의로 롤백하지 않습니다. 선택 객체가 많으면 입력 중 QGIS가 잠시 멈출 수 있습니다.
+설정에서 키를 바꾸거나 비우며 기본값으로 복원할 수 있습니다. 중복·외부 충돌·일반 문자만 사용하는 키·여러 단계의 키 조합은 받지 않습니다. 다른 QGIS 단축키는 변경하지 않습니다. 저장·반짝임 등 나머지 기능은 기본 키가 없습니다. 탐색과 지도 테마 단축키는 패널이 보일 때만 동작하며 FeatureNavEd와 겹치는 탐색 키는 중지합니다.
 
 ## English
 
-Quick Field Keys is a QGIS plugin for stepping through features and entering repeated attribute values with shortcuts.
-Choose the target layer in the panel, configure field/value presets, select features, and press a preset key.
-The screenshots above show version 1.7.5 with test fields and example shortcut assignments, not the default bindings.
+Quick Field Keys navigates features and applies repeated attribute values to a designated QGIS layer. Version 2.0.0 runs entirely in Python, with no plugin-owned native binaries or extra dependencies.
 
-Download the installation ZIP from [Releases](https://github.com/HaYanJongSeong/qgis-quick-field-keys/releases/latest) and use Plugins > Manage and Install Plugins > Install from ZIP. Restart QGIS after updating.
-Supports QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Version 1.7.9 passed three regression scripts, nine focused tests, actual Qt Alt+Up/Down and Alt+1 key-event checks, and temporary GeoPackage save/reopen checks on Windows with QGIS 4.2.3 / Qt 6.11. The wrapper exits after test return; normal teardown is not verified. QGIS 3.44 LTR support is retained but was not retested for 1.7.9; QGIS 3.44.15 / Qt 5.15.13 testing applies to 1.7.7. Earlier QGIS 3 releases are unsupported. Linux/macOS execution and Plugin Manager installation are untested in this release. No extra packages or accounts are needed. Restarting discards unapplied inputs, staged presets and in-memory feature Undo history; finish any work you need to keep first.
+Install the release ZIP through **Plugins → Manage and Install Plugins → Install from ZIP**, then restart QGIS after updating. Restarting discards unapplied inputs, pending values and feature Undo history. Targets are QGIS 3.44 LTR and QGIS 4.2+ in the 4.x series. Python 2.0.0 tests use isolated Windows QGIS 4.2.3 / Qt 6.11 processes. QGIS 3.44, Linux/macOS, physical keyboard use and Plugin Manager installation are unverified for this release.
 
-Version 1.7.9 adds whole-map-theme cycling, immediate preset-value refresh without losing unrelated drafts, and two lookup optimizations. The ZIP builder now includes the map-theme module. A same-field draft is superseded only when every captured target received that field's applied value; partial or different targets keep their drafts. Staged or failed writes are not shown as applied values.
+- Choose a layer, configure field/value presets and select features. Alt+1–9 immediately writes to the edit buffer, never automatically to a file. No selection means no changes. Changing the active layer does not retarget writes; invalid designated targets never fall back to another layer.
+- The preset, field visibility, Save, feature Undo and settings controls share one row. Immediate-mode checkboxes and the mode-toggle shortcut are removed. Configure or clear keys in settings; duplicate, bare typing, multistroke and conflicting keys are refused without changing other QGIS shortcuts.
+- Navigation wraps at both ends. Filters change only on explicit refresh; trash clears the input, not features. Captured selection can restrict navigation. Zoom modes include No zoom; navigation and the bulb can flash features without changing their attributes.
+- Drafts keep their captured targets and apply before navigation. Invalid inputs, locks and failed writes preserve drafts and block movement. Successful presets refresh only affected fields; unrelated and partial-target drafts remain intact. Locks affect this plugin, not other tools.
+- **Save commits all unsaved edits in the designated layer, including other tools' edits. It applies drafts and pending values first, keeps editing enabled and retains the buffer on failure. Saved changes cannot be restored by feature Undo.**
+- Feature Undo groups consecutive edits to the last selection, protects external changes and retains up to 200 groups in the current session. Saving, rollback, external Undo, layer removal and restart invalidate history.
+- Alt+Left/Right/Home/End navigates, Alt+Backspace restores the previous view, Alt+Z invokes feature Undo, and Alt+Up/Down cycles whole saved map themes while the panel is visible. Themes retain the editing target and unsaved attributes. They are not UI themes.
+- Use Set NULL for NULL. Primary keys, joined and expression fields are excluded. Invalid types and provider constraints can prevent changes or saving; check the reported result.
 
-- Default keys: Alt+1–9 for presets, Alt+Left/Right/Home/End for navigation, Alt+Up/Down for previous/next map theme, Alt+Backspace for the previous view, Alt+Z for feature Undo. Map themes cycle while the panel is visible and apply the saved visibility and styles of the whole layer tree, including background layers, without changing the designated editing target or saving files. These are not UI themes. The gear dialog changes or clears bindings; Save applies them.
-- Changes apply to the panel's designated layer, even when another layer is active or the panel is hidden. No selection means no changes.
-- Navigation flashes the destination. The bulb flashes the current selection without changing the view. Both work in No zoom mode.
-- Refresh explicitly applies the filter. Trash clears its input only. Editing and Undo do not re-evaluate filter membership.
-- Use the eye icon to choose inline fields. Locks block this plugin's new writes, not other tools or persistence of existing edits. Drafts and staged presets keep their original targets.
-- Navigation applies direct inputs to their captured selection in the edit buffer without a discard prompt or file save. Invalid values, locks or write failures retain the input and block navigation; external selection and filter changes do not retarget drafts.
-- **The disk button commits all unsaved edits in the designated layer, including other tools' edits. It applies drafts and pending presets first. Saved changes cannot be restored by feature Undo.** Preset entry does not save automatically.
-- Feature Undo groups consecutive plugin changes to the last selection and protects external edits. History is limited to 200 groups in the current session. Save, rollback, external Undo, layer removal and restart invalidate it.
-- Use Set NULL for NULL. Primary keys, joined fields and expression fields are excluded. Invalid values or provider constraints may prevent changes or saving; check the reported result.
+## Development
 
-## 개발 / Development
+Run in the chosen QGIS installation's Python environment, not its live Python console:
 
-QGIS Python 콘솔에서 저장소 경로를 바꿔 다음 테스트를 실행하세요.
-
-```python
-from pathlib import Path
-root = Path('/path/to/qgis-quick-field-keys')
-for name in ('test_qgis.py', 'test_navigation.py', 'test_optimization.py'):
-    test = root / 'tests' / name
-    exec(compile(test.read_text(encoding='utf-8'), str(test), 'exec'), {'__file__': str(test)})
-```
-
-The tests use an isolated project and canvas with memory layers. They do not edit the current project or its files.
-For a standalone run, use the chosen QGIS installation's Python environment to run `tests/run_qgis.py`. It also checks Save by reopening a temporary GeoPackage. The test profile and data are separate from your QGIS profile and project.
-They cover presets, navigation, filters, locks, shortcut settings, Save, Undo, whole-map-theme switching, lookup reuse and applied-value refresh with captured drafts. Theme tests send actual Qt Alt+Up/Down events; a separate isolated Qt check verified Alt+1. Physical keyboard use and installation through Plugin Manager remain separate manual checks.
-
-```sh
+```text
+python tests/run_python_qgis.py test_python_ui_lifecycle.py test_python_policies.py test_qgis.py test_navigation.py test_optimization.py test_bulk_reads.py
 python build_release.py /path/to/output
 ```
 
-## 문의와 라이선스
+Tests isolate profiles, projects and fixture data; the runner blocks this plugin's native loads before import. They cover policy boundaries, aliases, Qt widgets, lifecycle, preset/Undo failures, captured drafts, themes and temporary GeoPackage Save/reopen. CLI/automated checks do not prove physical keyboard use or manual installation. Historical native tests and Rust development sources are retained separately, not used as the Python release gate.
 
-- 관리: [HaYanJongSeong](https://github.com/HaYanJongSeong), kjs4075@live.com
-- 오류 제보·기능 요청: [Issues](https://github.com/HaYanJongSeong/qgis-quick-field-keys/issues)
-- 라이선스: [GPL-3.0-or-later](LICENSE)
+## License and contact
 
-탐색 방식은 Irene Jaya의 FeatureNavEd 1.0.8을 참고했습니다. 구현은 별도이며 원본의 MIT 라이선스를 [LICENSE.FeatureNavEd](LICENSE.FeatureNavEd)에 남겼습니다.
-[원본 저장소](https://github.com/irenejaya/feature-navigator-editor)
+GPL-3.0-or-later. Maintainer: [HaYanJongSeong](https://github.com/HaYanJongSeong), kjs4075@live.com.
+
+Navigation draws on Irene Jaya's FeatureNavEd 1.0.8; implementation is separate. Its MIT attribution is retained in [LICENSE.FeatureNavEd](LICENSE.FeatureNavEd). [Original repository](https://github.com/irenejaya/feature-navigator-editor).

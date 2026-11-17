@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-from qgis.core import QgsFields, QgsSettings, QgsVariantUtils, QgsVectorLayer
+from qgis.core import QgsSettings, QgsVariantUtils, QgsVectorLayer
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 try:
@@ -13,7 +13,8 @@ from qgis.PyQt.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QVBoxLayout,
 )
-from . import shortcuts as shortcut_config
+from . import rust_core, rust_presets, rust_edits, shortcuts as shortcut_config
+from .bulk_reads import BatchFeatureReader
 
 
 SETTING = 'quick_field_keys/presets'
@@ -22,32 +23,28 @@ KEYS = tuple(str(n) for n in range(1, 10))
 
 
 def converted_value(field, text, use_null):
-    if use_null:
+    if rust_edits.null_mode(use_null) is rust_edits.Decision.USE_NULL:
         return None
     result = field.convertCompatible(text)
     # Accept both the historical tuple and the QGIS 4 converted-value result.
-    if isinstance(result, tuple):
-        if not result[0]:
-            raise ValueError('The value is incompatible with the field type.')
-        return result[1]
-    return result
+    legacy = isinstance(result, tuple)
+    if rust_edits.conversion(legacy, bool(result[0]) if legacy else False) is rust_edits.Decision.REJECT_CONVERSION:
+        raise ValueError('The value is incompatible with the field type.')
+    return result[1] if legacy else result
 
 
 def writable_indices(layer):
     fields = layer.fields()
     primary = set(layer.dataProvider().pkAttributeIndexes())
-    return [i for i in range(len(fields))
-            if fields.fieldOrigin(i) in (QgsFields.FieldOrigin.OriginProvider, QgsFields.FieldOrigin.OriginEdit)
-            and not (fields.fieldOrigin(i) == QgsFields.FieldOrigin.OriginProvider
-                      and fields.fieldOriginIndex(i) in primary)]
+    return rust_core.writable_indices(fields, primary)
 
 
 def locked_names(layer):
     try:
-        names = json.loads(QgsSettings().value(f'quick_field_keys/locked_fields/{layer.id()}', '[]'))
-        return set(name for name in names if isinstance(name, str)) if isinstance(names, list) else set()
+        raw = QgsSettings().value(f'quick_field_keys/locked_fields/{layer.id()}', '[]')
     except (TypeError, ValueError):
         return set()
+    return rust_core.locked_names(raw)
 
 
 class QuickFieldKeys:
@@ -58,7 +55,7 @@ class QuickFieldKeys:
         self.dock_widget = None
         self.navigation_action = None
         self.field_editor = None
-        self.immediate = QgsSettings().value('quick_field_keys/immediate', True, type=bool)
+        self.immediate = True
         self.pending_layer = None
         self.pending_changes = {}
         self.pending_undo = []
@@ -78,8 +75,9 @@ class QuickFieldKeys:
 
     def initGui(self):
         for key in KEYS:
-            action = QAction(f'Quick Field Keys: preset {key} ({self.shortcut_key(f"preset_{key}") or "unassigned"})', self.iface.mainWindow())
-            action.triggered.connect(lambda checked=False, k=key: self.apply(k))
+            label = f'Quick Field Keys: preset {key} ({self.shortcut_key(f"preset_{key}") or "unassigned"})'
+            action = QAction(label, self.iface.mainWindow())
+            action.triggered.connect(lambda checked=False, key=key: self.apply(key))
             binding = self.shortcut_key(f'preset_{key}')
             if binding:
                 self.iface.registerMainWindowAction(action, binding)
@@ -299,7 +297,7 @@ class QuickFieldKeys:
 
     @staticmethod
     def same_value(left, right):
-        return (QgsVariantUtils.isNull(left) and QgsVariantUtils.isNull(right)) or left == right
+        return rust_core.same_value(left, right)
 
     def track_history_layer(self, layer):
         key = layer.id()
@@ -331,10 +329,7 @@ class QuickFieldKeys:
     def remember_feature_edit(self, layer, before, after):
         targets = tuple(sorted({fid for fid, name in after}))
         previous = self.applied_history[-1] if self.applied_history else None
-        merge = previous is not None and previous['layer'] is layer and previous['targets'] == targets
-        if merge:
-            merge = all(self.same_value(before[key] if key in before else layer.getFeature(key[0])[key[1]], expected)
-                        for key, expected in previous['after'].items())
+        merge = rust_core.history_compatible(previous, (layer, targets), before)
         if merge:
             for key, value in before.items():
                 previous['before'].setdefault(key, value)
@@ -359,25 +354,22 @@ class QuickFieldKeys:
             self.warn(f'Values reverted, but map focus or flash failed: {error}')
 
     def apply_changes(self, layer, changes, title, record_history=True):
-        try:
-            available = isinstance(layer, QgsVectorLayer) and layer.isValid() and not layer.readOnly()
-        except RuntimeError:
-            available = False
-        if not available:
+        if rust_edits.target(layer) is not rust_edits.Decision.PROCEED:
             self.warn('The target layer is unavailable or read-only.')
             return False
-        if not changes:
+        if rust_edits.check(rust_edits.Phase.CHANGES, len(changes)) is rust_edits.Decision.EMPTY:
             self.warn('No changed fields to apply.')
             return False
         allowed = writable_indices(layer)
         locks = locked_names(layer)
         converted = []
+        reader = BatchFeatureReader(layer, changes)
         try:
             for (fid, name), value in changes.items():
-                if name in locks:
+                if rust_edits.lock(name in locks) is rust_edits.Decision.LOCKED:
                     raise ValueError(f'Field "{name}" is locked. Unlock it before applying or undoing changes.')
                 index = layer.fields().indexFromName(name)
-                if index not in allowed or not layer.getFeature(fid).isValid():
+                if rust_edits.field_access(index in allowed, index in allowed and reader.get(fid).isValid()) is rust_edits.Decision.INVALID_TARGET:
                     raise ValueError('A target feature or writable field no longer exists.')
                 value = converted_value(layer.fields()[index], value, QgsVariantUtils.isNull(value))
                 converted.append((fid, index, value))
@@ -388,7 +380,8 @@ class QuickFieldKeys:
             self.warn('Could not start editing the layer.')
             return False
         self.track_history_layer(layer)
-        before = {(fid, layer.fields()[index].name()): layer.getFeature(fid).attribute(index)
+        reader.refresh()
+        before = {(fid, layer.fields()[index].name()): reader.get(fid).attribute(index)
                   for fid, index, value in converted}
         self._writing = True
         try:
@@ -396,10 +389,10 @@ class QuickFieldKeys:
             for fid, index, value in converted:
                 if not layer.changeAttributeValue(fid, index, value, skipDefaultValues=True):
                     raise RuntimeError(f'Could not update feature {fid}. This operation was reverted.')
+            reader.refresh()
             for fid, index, value in converted:
-                actual = layer.getFeature(fid).attribute(index)
-                if ((QgsVariantUtils.isNull(value) and not QgsVariantUtils.isNull(actual))
-                        or (not QgsVariantUtils.isNull(value) and actual != value)):
+                actual = reader.get(fid).attribute(index)
+                if rust_edits.verification(value, actual) is rust_edits.Decision.VERIFY_FAILED:
                     raise RuntimeError('Value verification failed. This operation was reverted.')
         except Exception as error:
             layer.destroyEditCommand()
@@ -432,10 +425,7 @@ class QuickFieldKeys:
             return None
         return layer
 
-    def configure(self, checked=False):
-        layer = self.active_vector()
-        if layer is None:
-            return
+    def preset_dialog(self, layer):
         dialog = QDialog(self.iface.mainWindow())
         dialog.setWindowTitle(MENU)
         dialog.resize(700, 450)
@@ -466,7 +456,7 @@ class QuickFieldKeys:
             null.setToolTip('Set NULL — Assign NULL instead of the entered text.\nNULL 지정 — 입력한 값 대신 NULL을 적용합니다.')
             null.setChecked(bool(preset.get('null', False)))
             text.setEnabled(not null.isChecked())
-            null.toggled.connect(lambda enabled, widget=text: widget.setEnabled(not enabled))
+            null.toggled.connect(text.setDisabled)
             row = QHBoxLayout()
             row.addWidget(combo, 1)
             row.addWidget(text, 1)
@@ -478,6 +468,13 @@ class QuickFieldKeys:
         buttons.button(QDialogButtonBox.StandardButton.Ok).setToolTip('OK — Validate and save Alt+1–9 presets; do not edit feature values yet.\n확인 — Alt+1~9 프리셋을 검증하고 저장합니다. 객체 값은 아직 수정하지 않습니다.')
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setToolTip('Cancel — Close without changing the saved presets.\n취소 — 저장된 프리셋을 변경하지 않고 닫습니다.')
         layout.addWidget(buttons)
+        return dialog, controls, buttons
+
+    def configure(self, checked=False):
+        layer = self.active_vector()
+        if layer is None:
+            return
+        dialog, controls, buttons = self.preset_dialog(layer)
         buttons.rejected.connect(dialog.reject)
 
         def save():
@@ -506,19 +503,19 @@ class QuickFieldKeys:
         if layer is None:
             return
         ids = layer.selectedFeatureIds()
-        if not ids:
+        if rust_presets.check(rust_presets.Phase.SELECTION, len(ids)) is rust_presets.Decision.NO_SELECTION:
             self.warn('No features selected. Nothing was changed.')
             return
         preset = self.presets.get(key, {})
-        if not isinstance(preset, dict) or not preset.get('field'):
+        if rust_presets.configuration(preset) is rust_presets.Decision.CONFIGURE:
             self.warn(f'Configure a field and value for Alt+{key} first.')
             self.configure()
             return
         index = layer.fields().indexFromName(preset['field'])
-        if preset['field'] in locked_names(layer):
+        if rust_presets.lock(preset['field'] in locked_names(layer)) is rust_presets.Decision.LOCKED:
             self.warn(f'Field "{preset["field"]}" is locked. No values were changed or staged.')
             return
-        if index < 0 or index not in writable_indices(layer):
+        if rust_presets.field_access(index >= 0, index >= 0 and index in writable_indices(layer)) is rust_presets.Decision.UNWRITABLE:
             self.warn('The configured field is missing or not writable. Check the preset.')
             return
         try:

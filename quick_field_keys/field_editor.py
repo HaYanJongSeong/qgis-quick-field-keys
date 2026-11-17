@@ -4,9 +4,10 @@ Edit only explicitly chosen fields for a fixed selection of features.
 The layer form configuration is never changed. Navigation applies drafts to the edit buffer.
 """
 import json
+import sys
 from pathlib import Path
 
-from qgis.core import QgsSettings, QgsVariantUtils
+from qgis.core import QgsSettings
 from qgis.gui import QgsGui
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon, QKeySequence
@@ -16,6 +17,7 @@ from qgis.PyQt.QtWidgets import (
     QScrollArea, QStyle, QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from . import rust_core, rust_drafts
 from .plugin import locked_names, writable_indices
 
 
@@ -28,6 +30,7 @@ class FieldEditor(QDialog):
         if embedded:
             self.setWindowFlags(Qt.WindowType.Widget)
         self.plugin = plugin
+        self._refresh_module = sys.modules[__name__]
         self.layer = layer
         self.ids = list(layer.selectedFeatureIds())
         self.rows = {}
@@ -88,11 +91,6 @@ class FieldEditor(QDialog):
                 layout.addLayout(row)
             layer.destroyed.connect(self.layer_deleted)
             return
-        self.immediate = QCheckBox('Apply Alt+1-9 immediately to layer edits')
-        self.immediate.setToolTip('Immediate shortcut application — On: edit buffer. Off: stage shortcut values. File save remains manual.\n단축키 즉시 적용 — 켜면 편집 버퍼에 적용하고, 끄면 대기값으로 보관합니다. 파일 저장은 별도입니다.')
-        self.immediate.setChecked(plugin.immediate)
-        self.immediate.toggled.connect(plugin.set_immediate)
-        layout.addWidget(self.immediate)
         self.status = QLabel()
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
@@ -109,6 +107,8 @@ class FieldEditor(QDialog):
         ):
             button = QPushButton(text)
             button.setToolTip(tooltip)
+            if text == 'Apply form edits':
+                button.setObjectName('apply_form')
             if text == 'Undo (Alt+Z)':
                 button.setShortcut(QKeySequence('Alt+Z'))
             button.clicked.connect(callback)
@@ -178,10 +178,7 @@ class FieldEditor(QDialog):
         if self.layer is not layer or not self.ids:
             return
         captured = set(self.ids)
-        names = {name for fid, name in changes if fid in captured and name in self.rows}
-        # Only a write covering every captured target can supersede a field draft.
-        names = {name for name in names if name not in self.changed_fields
-                 or all((fid, name) in changes for fid in captured)}
+        names = rust_drafts.refresh_fields(captured, self.rows, (changes, self.changed_fields))
         if not names:
             return
         features = [layer.getFeature(fid) for fid in self.ids]
@@ -207,10 +204,11 @@ class FieldEditor(QDialog):
         if name not in self.rows or name in locked_names(self.layer):
             return
         same, initial = self.initial_values[name]
-        if same and self.equal(self.rows[name][0].value(), initial):
-            self.changed_fields.discard(name)
-        else:
+        equal = self.equal(self.rows[name][0].value(), initial) if same else False
+        if rust_drafts.dirty(same, equal):
             self.changed_fields.add(name)
+        else:
+            self.changed_fields.discard(name)
         if hasattr(self, 'save_button'):
             self.refresh_save_state()
 
@@ -257,7 +255,7 @@ class FieldEditor(QDialog):
 
     @staticmethod
     def equal(left, right):
-        return (QgsVariantUtils.isNull(left) and QgsVariantUtils.isNull(right)) or left == right
+        return rust_core.same_value(left, right)
 
     def choose_fields(self, checked=False):
         if self.layer is None:
@@ -326,7 +324,8 @@ class FieldEditor(QDialog):
 
     def form_changes(self):
         return {(fid, name): wrapper.value()
-                    for name, (wrapper, lock) in self.rows.items() if name in self.changed_fields and not lock.isChecked()
+                    for name in rust_drafts.applicable_fields(self.rows, self.changed_fields)
+                    for wrapper, lock in (self.rows[name],)
                     for fid in self.ids}
 
     def apply_pending(self, checked=False):
@@ -356,9 +355,6 @@ class FieldEditor(QDialog):
     def refresh_status(self):
         if self.embedded:
             return
-        self.immediate.blockSignals(True)
-        self.immediate.setChecked(self.plugin.immediate)
-        self.immediate.blockSignals(False)
         pending = self.plugin.pending_changes
         fields = ', '.join(sorted({name for fid, name in pending}))
         try:

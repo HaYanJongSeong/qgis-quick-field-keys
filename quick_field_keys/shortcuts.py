@@ -2,6 +2,8 @@
 
 Plugin-only shortcut configuration; never change other QGIS bindings.
 """
+from . import rust_core
+from .rust_shortcuts import ShortcutGuard
 import json
 
 from qgis.PyQt.QtGui import QKeySequence
@@ -23,14 +25,13 @@ ACTIONS.update({
     'back': ('Previous view / 직전 화면', 'Alt+Backspace'),
     'flash': ('Flash selected features / 선택 객체 반짝임', ''),
     'undo': ('Feature Undo / 객체 실행 취소', 'Alt+Z'),
-    'presets': ('Field value presets / 필드 값 설정', ''),
+    'presets': ('Shortcuts for value apply to Field / 필드 값 적용 단축키', ''),
     'columns': ('Visible columns / 표시 컬럼 선택', ''),
     'refresh': ('Apply filter and reload / 필터 적용·새로고침', ''),
     'expression': ('Expression builder / 표현식 작성기', ''),
     'clear': ('Clear filter input / 필터 입력 지우기', ''),
     'capture': ('Capture current selection / 현재 선택 고정', ''),
     'scope': ('Toggle captured selection only / 고정 선택 제한 전환', ''),
-    'immediate': ('Toggle immediate application / 단축키 즉시 적용 전환', ''),
     'zoom': ('Cycle zoom mode / 줌 방식 순환', ''),
     'layer': ('Choose layer / 레이어 선택', ''),
     'sort': ('Choose sort field / 정렬 필드 선택', ''),
@@ -41,35 +42,36 @@ ACTIONS.update({
 
 
 def normalized(values):
-    result, used = {}, {}
-    for name in ACTIONS:
-        value = values.get(name, '')
-        if not isinstance(value, str):
-            raise ValueError('Invalid shortcut value / 잘못된 단축키 값')
-        sequence = QKeySequence(value)
-        if sequence.count() > 1 or (value.strip() and sequence.isEmpty()):
-            raise ValueError('Use one key combination per action / 기능마다 키 조합 하나를 지정하세요.')
-        key = sequence.toString(QKeySequence.SequenceFormat.PortableText)
-        if key:
-            combination = sequence[0]
-            if isinstance(combination, int):  # Qt5 combines key and modifier bits.
-                modifiers = combination
-                key_code = combination & ~int(Qt.KeyboardModifier.KeyboardModifierMask)
-            else:
-                modifiers = combination.keyboardModifiers()
-                key_code = int(combination.key())
-                modifiers = modifiers.value
-            function_key = int(Qt.Key.Key_F1) <= key_code <= int(Qt.Key.Key_F35)
-            safe_modifiers = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
-            safe_bits = int(safe_modifiers) if isinstance(combination, int) else safe_modifiers.value
-            if not function_key and not (modifiers & safe_bits):
-                raise ValueError('Use Ctrl/Alt/Meta or a function key to avoid triggering edits while typing.\n입력 중 오작동을 막으려면 Ctrl/Alt/Meta 조합 또는 기능키를 사용하세요.')
-        if key and key in used:
-            raise ValueError(f'Duplicate shortcut {key}: {ACTIONS[used[key]][0]} / {ACTIONS[name][0]}')
-        if key:
-            used[key] = name
-        result[name] = key
-    return result
+    with ShortcutGuard() as guard:
+        result = {}
+        for name in ACTIONS:
+            value = values.get(name, '')
+            if not isinstance(value, str):
+                raise ValueError('Invalid shortcut value / 잘못된 단축키 값')
+            sequence = QKeySequence(value)
+            if sequence.count() > 1 or (value.strip() and sequence.isEmpty()):
+                raise ValueError('Use one key combination per action / 기능마다 키 조합 하나를 지정하세요.')
+            key = sequence.toString(QKeySequence.SequenceFormat.PortableText)
+            if key:
+                combination = sequence[0]
+                if isinstance(combination, int):  # Qt5 combines key and modifier bits.
+                    modifiers = combination
+                    key_code = combination & ~int(Qt.KeyboardModifier.KeyboardModifierMask)
+                else:
+                    modifiers = combination.keyboardModifiers()
+                    key_code = int(combination.key())
+                    modifiers = modifiers.value
+                function_key = int(Qt.Key.Key_F1) <= key_code <= int(Qt.Key.Key_F35)
+                safe_modifiers = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
+                safe_bits = int(safe_modifiers) if isinstance(combination, int) else safe_modifiers.value
+                if not rust_core.shortcut_safe(function_key, modifiers, safe_bits):
+                    raise ValueError('Use Ctrl/Alt/Meta or a function key to avoid triggering edits while typing.\n입력 중 오작동을 막으려면 Ctrl/Alt/Meta 조합 또는 기능키를 사용하세요.')
+            if key:
+                previous = guard.check(key, name)
+                if previous is not None:
+                    raise ValueError(f'Duplicate shortcut {key}: {ACTIONS[previous][0]} / {ACTIONS[name][0]}')
+            result[name] = key
+        return result
 
 
 def load(settings):
@@ -84,7 +86,7 @@ def load(settings):
         return {name: default for name, (label, default) in ACTIONS.items()}
 
 
-def configure(plugin):
+def dialog_view(plugin):
     dialog = QDialog(plugin.iface.mainWindow())
     dialog.setWindowTitle('Shortcut settings / 단축키 설정')
     dialog.resize(640, 560)
@@ -119,6 +121,13 @@ def configure(plugin):
     buttons.button(QDialogButtonBox.StandardButton.Cancel).setToolTip('Cancel — Keep current shortcuts.\n취소 — 기존 단축키를 유지합니다.')
     buttons.button(QDialogButtonBox.StandardButton.RestoreDefaults).setToolTip('Restore defaults — Fill in default keys; Save is still required.\n기본값 복원 — 기본 키를 입력합니다. 저장을 눌러야 적용됩니다.')
 
+    layout.addWidget(buttons)
+    return dialog, controls, buttons
+
+
+def configure(plugin):
+    dialog, controls, buttons = dialog_view(plugin)
+
     def save():
         try:
             plugin.set_shortcuts({name: edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText) for name, edit in controls.items()})
@@ -134,7 +143,6 @@ def configure(plugin):
     buttons.accepted.connect(save)
     buttons.rejected.connect(dialog.reject)
     buttons.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(defaults)
-    layout.addWidget(buttons)
     try:
         dialog.exec()
     finally:
